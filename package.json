@@ -6,21 +6,39 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "ingest:docs": "tsx scripts/ingest-docs.ts"
   },
   "dependencies": {
-    "next": "16.1.6",
+    "@google/generative-ai": "^0.24.1",
+    "@libsql/client": "^0.17.0",
+    "@mastra/core": "^1.1.0",
+    "mastra": "^1.1.0",
+    "next": "15.5.11",
+    "openai": "^6.17.0",
+    "pdf-parse": "^1.1.1",
+    "pg": "^8.18.0",
+    "pgvector": "^0.2.1",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "zod": "3.25.76"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "15.5.11",
+    "jsdom": "^26.1.0",
     "tailwindcss": "^4",
+    "tsx": "^4.20.0",
+    "vitest": "^2.1.8",
     "typescript": "^5"
   }
 }
