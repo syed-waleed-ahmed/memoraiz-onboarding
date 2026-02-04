@@ -38,5 +38,6 @@ Split-screen onboarding experience with a live company profile canvas and a Mast
 - Profile polling endpoint is `app/api/profile/route.ts`.
 - Database schema is in `lib/db/schema.sql`.
 - Schema helper is `scripts/apply-schema.ts` (loads `.env.local`).
+- Chat history is stored in the `chat_messages` table and loaded via `app/api/messages/route.ts`.
 - Local doc fallback uses markdown and PDF files in the project root (or the two included Memoraiz docs).
 - CI runs lint, tests, and build via GitHub Actions. Vercel deploy uses repository secrets.

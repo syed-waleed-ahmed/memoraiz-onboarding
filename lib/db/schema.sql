@@ -21,4 +21,12 @@ create table if not exists memoraiz_documents (
   created_at timestamptz not null default now()
 );
 
+create table if not exists chat_messages (
+  id uuid primary key,
+  session_id text not null,
+  role text not null,
+  content text not null,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists memoraiz_documents_embedding_idx on memoraiz_documents using ivfflat (embedding vector_cosine_ops);

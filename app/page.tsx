@@ -39,6 +39,13 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   },
 ];
 
+function formatTimestamp(value?: string) {
+  if (!value) return "Now";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Now";
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
@@ -68,6 +75,28 @@ export default function Home() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.profile) setProfile(data.profile as CompanyProfile);
+      })
+      .catch(() => null);
+
+    fetch(`/api/messages?sessionId=${sessionId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.messages || data.messages.length === 0) return;
+        setMessages(
+          data.messages.map(
+            (message: {
+              id: string;
+              role: ChatRole;
+              content: string;
+              createdAt?: string;
+            }) => ({
+              id: message.id,
+              role: message.role,
+              content: message.content,
+              timestamp: formatTimestamp(message.createdAt),
+            }),
+          ),
+        );
       })
       .catch(() => null);
   }, [sessionId]);

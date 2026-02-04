@@ -6,6 +6,7 @@ import {
   setProfile,
   type CompanyProfile,
 } from "@/lib/store/profileStore";
+import { insertMessage } from "@/lib/db/messageRepo";
 
 interface AgentRequestBody {
   message: string;
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
   requestContext.set("profile", profile);
 
   const agent = createOnboardingAgent();
+  await insertMessage(sessionId, "user", body.message).catch(() => null);
   const output = await agent.generate(
     [
       {
@@ -49,6 +51,7 @@ export async function POST(request: Request) {
   );
 
   const updatedProfile = getProfile(sessionId);
+  await insertMessage(sessionId, "assistant", output.text).catch(() => null);
 
   return NextResponse.json({
     reply: output.text,
