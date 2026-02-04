@@ -5,7 +5,7 @@ export async function getProfileById(profileId: string) {
   const pool = getPool();
   if (!pool) return null;
   const result = await pool.query(
-    "select id, name, industry, description, ai_maturity_level, goals from company_profiles where id = $1",
+    "select id, name, industry, description, ai_maturity_level, ai_usage, goals from company_profiles where id = $1",
     [profileId],
   );
   return result.rows[0] ?? null;
@@ -19,16 +19,17 @@ export async function upsertProfile(
   const pool = getPool();
   if (!pool) return null;
   const result = await pool.query(
-    `insert into company_profiles (id, user_id, name, industry, description, ai_maturity_level, goals)
-     values ($1, $2, $3, $4, $5, $6, $7)
+    `insert into company_profiles (id, user_id, name, industry, description, ai_maturity_level, ai_usage, goals)
+     values ($1, $2, $3, $4, $5, $6, $7, $8)
      on conflict (id) do update set
        name = excluded.name,
        industry = excluded.industry,
        description = excluded.description,
        ai_maturity_level = excluded.ai_maturity_level,
+       ai_usage = excluded.ai_usage,
        goals = excluded.goals,
        updated_at = now()
-     returning id, name, industry, description, ai_maturity_level, goals`,
+     returning id, name, industry, description, ai_maturity_level, ai_usage, goals`,
     [
       profileId,
       userId,
@@ -36,6 +37,7 @@ export async function upsertProfile(
       profile.industry,
       profile.description,
       profile.aiMaturityLevel,
+      profile.aiUsage,
       profile.goals,
     ],
   );

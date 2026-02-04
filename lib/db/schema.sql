@@ -7,6 +7,7 @@ create table if not exists company_profiles (
   industry text,
   description text,
   ai_maturity_level text,
+  ai_usage text,
   goals text,
   updated_at timestamptz not null default now()
 );

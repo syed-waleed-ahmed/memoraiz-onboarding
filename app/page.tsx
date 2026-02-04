@@ -50,6 +50,27 @@ export default function Home() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const streamingTimerRef = useRef<number | null>(null);
   const pollingTimerRef = useRef<number | null>(null);
+  const saveTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    const stored = window.localStorage.getItem("memoraiz-session");
+    if (stored) {
+      setSessionId(stored);
+      return;
+    }
+    const created = crypto.randomUUID();
+    window.localStorage.setItem("memoraiz-session", created);
+    setSessionId(created);
+  }, []);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    fetch(`/api/profile?sessionId=${sessionId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.profile) setProfile(data.profile as CompanyProfile);
+      })
+      .catch(() => null);
+  }, [sessionId]);
 
   const canEditForm = useMemo(() => !isTyping, [isTyping]);
 
@@ -108,6 +129,24 @@ export default function Home() {
       ...current,
       [field]: value,
     }));
+
+    if (!sessionId) return;
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+    saveTimerRef.current = window.setTimeout(() => {
+      fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          profile: {
+            ...profile,
+            [field]: value,
+          },
+        }),
+      }).catch(() => null);
+    }, 500);
   };
 
   const handleSend = async () => {
