@@ -13,12 +13,14 @@ export async function searchDocuments(
   const pool = getPool();
   if (!pool) return [];
 
+  const vectorLiteral = `[${queryEmbedding.join(",")}]`;
+
   const result = await pool.query(
     `select content, source, 1 - (embedding <=> $1) as score
      from memoraiz_documents
      order by embedding <=> $1
      limit $2`,
-    [queryEmbedding, limit],
+    [vectorLiteral, limit],
   );
 
   return result.rows.map((row) => ({

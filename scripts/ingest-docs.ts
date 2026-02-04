@@ -4,6 +4,9 @@ import { randomUUID } from "node:crypto";
 import { getPool } from "../lib/db/client";
 import { embedText } from "../lib/mastra/embeddings";
 
+import { config } from "dotenv";
+
+config({ path: ".env.local" });
 const FALLBACK_DOCS = [
   "Catalogo_MemorAIz_v1.md",
   "Features_List_Assistente_AI.md",
@@ -46,11 +49,12 @@ async function ingest() {
     while (index < normalized.length) {
       const slice = normalized.slice(index, index + size);
       const embedding = await embedText(slice);
+      const vectorLiteral = `[${embedding.join(",")}]`;
 
       await pool.query(
         `insert into memoraiz_documents (id, source, title, content, embedding)
          values ($1, $2, $3, $4, $5)`,
-        [randomUUID(), file, file, slice, embedding],
+        [randomUUID(), file, file, slice, vectorLiteral],
       );
 
       index += size - overlap;
