@@ -1,6 +1,5 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import pdfParse from "pdf-parse";
 
 const FALLBACK_DOCS = [
   "Catalogo_MemorAIz_v1.md",
@@ -27,6 +26,11 @@ export async function loadDocChunks() {
 
     if (/\.pdf$/i.test(file)) {
       const buffer = await readFile(filePath);
+      const { default: pdfParse } = (await import("pdf-parse")) as {
+        default: (data: Buffer | Uint8Array | ArrayBuffer) => Promise<{
+          text: string;
+        }>;
+      };
       const parsed = await pdfParse(buffer);
       normalized = parsed.text.replace(/\r\n/g, "\n").trim();
     } else {

@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { getPool } from "../lib/db/client";
 import { embedText } from "../lib/mastra/embeddings";
-import pdfParse from "pdf-parse";
 
 const FALLBACK_DOCS = [
   "Catalogo_MemorAIz_v1.md",
@@ -26,6 +25,11 @@ async function ingest() {
 
     if (/\.pdf$/i.test(file)) {
       const buffer = await readFile(filePath);
+      const { default: pdfParse } = (await import("pdf-parse")) as {
+        default: (data: Buffer | Uint8Array | ArrayBuffer) => Promise<{
+          text: string;
+        }>;
+      };
       const parsed = await pdfParse(buffer);
       normalized = parsed.text.replace(/\r\n/g, "\n").trim();
     } else {
