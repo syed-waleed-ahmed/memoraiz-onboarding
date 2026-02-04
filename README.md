@@ -25,13 +25,18 @@ Split-screen onboarding experience with a live company profile canvas and a Mast
 4. (Optional) Ingest docs into pgvector:
 	- `pnpm ingest:docs`
 
-5. Run tests:
+5. Apply database schema (recommended before ingestion):
+	- `pnpm tsx scripts/apply-schema.ts`
+
+6. Run tests:
 	- `pnpm test`
 
 ## Notes
 
 - The onboarding agent API lives in `app/api/agent/route.ts`.
 - The live canvas is in `app/page.tsx`.
+- Profile polling endpoint is `app/api/profile/route.ts`.
 - Database schema is in `lib/db/schema.sql`.
+- Schema helper is `scripts/apply-schema.ts` (loads `.env.local`).
 - Local doc fallback uses markdown and PDF files in the project root (or the two included Memoraiz docs).
 - CI runs lint, tests, and build via GitHub Actions. Vercel deploy uses repository secrets.
