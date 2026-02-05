@@ -696,13 +696,13 @@ export default function ChatClient() {
                         <div className="flex items-center gap-2 text-xs">
                           <button
                             onClick={saveEditedMessage}
-                            className="action-btn rounded-full px-3 py-1"
+                            className="theme-btn-icon rounded-full px-3 py-1"
                           >
                             Save
                           </button>
                           <button
                             onClick={cancelEditingMessage}
-                            className="action-btn-muted rounded-full px-3 py-1"
+                            className="theme-btn-icon rounded-full px-3 py-1 opacity-60"
                           >
                             Cancel
                           </button>
@@ -733,7 +733,7 @@ export default function ChatClient() {
                         <>
                           <button
                             onClick={() => startEditingMessage(message)}
-                            className="action-icon-btn"
+                            className="theme-btn-icon"
                             disabled={isTyping}
                             aria-label="Edit message"
                             title="Edit"
@@ -745,7 +745,7 @@ export default function ChatClient() {
                           </button>
                           <button
                             onClick={() => handleCopy(message.id, message.content)}
-                            className="action-icon-btn"
+                            className="theme-btn-icon"
                             aria-label="Copy message"
                             title={copiedMessageId === message.id ? "Copied" : "Copy"}
                           >
@@ -759,7 +759,7 @@ export default function ChatClient() {
                         <>
                           <button
                             onClick={handleRegenerate}
-                            className="action-icon-btn"
+                            className="theme-btn-icon"
                             disabled={isTyping}
                             aria-label="Regenerate response"
                             title="Regenerate"
@@ -771,7 +771,7 @@ export default function ChatClient() {
                           </button>
                           <button
                             onClick={() => handleCopy(message.id, message.content)}
-                            className="action-icon-btn"
+                            className="theme-btn-icon"
                             aria-label="Copy message"
                             title={copiedMessageId === message.id ? "Copied" : "Copy"}
                           >
@@ -782,7 +782,7 @@ export default function ChatClient() {
                           </button>
                           <button
                             onClick={() => toggleFeedback(message.id, "up")}
-                            className={`action-icon-btn ${
+                            className={`theme-btn-icon ${
                               feedbackById[message.id] === "up" ? "is-active" : ""
                             }`}
                             aria-label="Like message"
@@ -795,7 +795,7 @@ export default function ChatClient() {
                           </button>
                           <button
                             onClick={() => toggleFeedback(message.id, "down")}
-                            className={`action-icon-btn ${
+                            className={`theme-btn-icon ${
                               feedbackById[message.id] === "down" ? "is-active" : ""
                             }`}
                             aria-label="Dislike message"
@@ -843,7 +843,7 @@ export default function ChatClient() {
               <button
                 onClick={isTyping ? stopStreaming : () => void handleSend()}
                 disabled={isTyping ? false : !canSend}
-                className="primary-btn flex h-9 w-9 items-center justify-center rounded-full transition hover:brightness-105 disabled:opacity-40"
+                className="theme-btn-icon flex h-9 w-9 items-center justify-center transition disabled:opacity-40"
                 aria-label={isTyping ? "Stop generating" : "Send message"}
               >
                 {isTyping ? (
@@ -894,29 +894,58 @@ export default function ChatClient() {
           </div>
         </div>
 
-        <div className="mt-6 flex-1 min-h-0 space-y-4 overflow-y-auto pr-1 canvas-scroll">
-          {(
-            [
-              { key: "name", label: "Company Name" },
-              { key: "industry", label: "Industry" },
-              { key: "description", label: "Description" },
-              { key: "aiMaturityLevel", label: "AI Maturity" },
-              { key: "aiUsage", label: "AI Usage" },
-              { key: "goals", label: "Goals" },
-            ] as const
-          ).map(({ key, label }) => (
-            <label key={key} className="label-caps block text-xs uppercase text-slate-500">
+        <form
+          className="mt-6 flex-1 min-h-0 space-y-3 overflow-y-auto pr-1 canvas-scroll"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!activeConversationId || !stableUserId) return;
+            await fetch("/api/profile", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                conversationId: activeConversationId,
+                stableUserId,
+                tabSessionId,
+                profile,
+              }),
+            });
+            // Optionally show a toast or confirmation here
+          }}
+        >
+          {([
+            { key: "name", label: "Company Name" },
+            { key: "industry", label: "Industry" },
+            { key: "description", label: "Description" },
+            { key: "aiMaturityLevel", label: "AI Maturity" },
+            { key: "aiUsage", label: "AI Usage" },
+            { key: "goals", label: "Goals" },
+          ] as const).map(({ key, label }) => (
+            <label
+              key={key}
+              className="label-caps block text-[13px] font-medium tracking-wide text-slate-600 mb-1 formal-canvas-label"
+              style={{ fontFamily: 'Segoe UI, Arial, Helvetica, sans-serif' }}
+            >
               {label}
               <textarea
                 value={profile[key]}
                 onChange={(event) => applyProfileUpdate(key, event.target.value)}
-                className="canvas-input mt-2 min-h-[78px] w-full rounded-2xl border border-white/10 bg-[var(--surface-2)] px-4 py-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 transition focus:border-white/30"
+                className="formal-canvas-textarea mt-1 w-full"
                 placeholder={`Add ${label.toLowerCase()}...`}
                 disabled={!canEditForm}
+                style={{ fontFamily: 'Segoe UI, Arial, Helvetica, sans-serif', fontSize: '15px', lineHeight: '1.5' }}
               />
             </label>
           ))}
-        </div>
+          <div className="pt-2 flex justify-end">
+            <button
+              type="submit"
+              className="formal-canvas-submit"
+              disabled={!canEditForm}
+            >
+              Submit
+            </button>
+          </div>
+        </form>
       </section>
     </div>
   );

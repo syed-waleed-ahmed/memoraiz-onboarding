@@ -248,7 +248,8 @@ export default function SidebarClient() {
       <div className="flex items-center">
         <button
           onClick={handleNewConversation}
-          className="new-chat-btn flex-1 rounded-xl border border-emerald-400/30 bg-gradient-to-r from-emerald-400/15 via-transparent to-transparent px-4 py-2 text-sm font-medium text-slate-100 transition"
+          className="theme-btn"
+          style={{ width: '100%', borderRadius: '12px', fontSize: '15px', fontWeight: 600 }}
         >
           + New chat
         </button>

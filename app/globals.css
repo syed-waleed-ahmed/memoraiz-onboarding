@@ -1,3 +1,46 @@
+/* Formal font and compact textarea for Company Canvas */
+.formal-canvas-label {
+  font-family: 'Segoe UI', Arial, Helvetica, sans-serif !important;
+  font-weight: 500;
+  color: #334155;
+  letter-spacing: normal !important;
+  margin-bottom: 0.25rem;
+}
+.formal-canvas-textarea {
+  font-family: 'Segoe UI', Arial, Helvetica, sans-serif !important;
+  font-size: 15px !important;
+  color: var(--foreground) !important;
+  min-height: 36px !important;
+  max-height: 160px;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  background: var(--surface-2) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+.formal-canvas-textarea:focus {
+  border-color: var(--accent-2) !important;
+  background: var(--surface) !important;
+}
+.formal-canvas-submit {
+  width: 100%;
+  font-family: 'Segoe UI', Arial, Helvetica, sans-serif !important;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 10px 0;
+  background: var(--surface-2);
+  color: var(--foreground);
+  border: 1px solid var(--edge);
+  box-shadow: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+.formal-canvas-submit:hover:enabled, .formal-canvas-submit:focus:enabled {
+  background: var(--surface-3);
+  border-color: var(--accent-2);
+}
 @import "tailwindcss";
 
 :root {
@@ -422,14 +465,36 @@ body {
   border-color: rgba(14, 165, 233, 0.35);
 }
 
-.primary-btn {
-  background: linear-gradient(120deg, #34d399 0%, #7dd3fc 100%);
-  color: #081218;
+
+/* Unified theme button style */
+.theme-btn {
+  width: 100%;
+  font-family: 'Segoe UI', Arial, Helvetica, sans-serif !important;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 10px 0;
+  background: var(--surface-2);
+  color: var(--foreground);
+  border: 1px solid var(--edge);
+  box-shadow: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+.theme-btn:hover:enabled, .theme-btn:focus:enabled {
+  background: var(--surface-3);
+  border-color: var(--accent-2);
 }
 
-:root[data-theme="light"] .primary-btn {
-  background: linear-gradient(120deg, #22c55e 0%, #5eead4 100%);
-  color: #052014;
+.theme-btn-icon {
+  background: var(--surface-2);
+  color: var(--foreground);
+  border: 1px solid var(--edge);
+  border-radius: 9999px;
+  transition: background 0.2s, border-color 0.2s;
+}
+.theme-btn-icon:hover:enabled, .theme-btn-icon:focus:enabled {
+  background: var(--surface-3);
+  border-color: var(--accent-2);
 }
 
 .sidebar-shell {
