@@ -9,7 +9,7 @@ Split-screen onboarding experience with a live company profile canvas and a Mast
 
 ## Setup
 
-1. Copy environment variables: duplicate `.env.example` to `.env.local`, add your `OPENAI_API_KEY` and `GEMINI_API_KEY`, set `GOOGLE_GENERATIVE_AI_API_KEY` if Gemini still errors, optionally set `MEMORAIZ_MODEL=google/gemini-1.5-flash-latest`, and add your `POSTGRES_URL` for chat history + pgvector.
+1. Copy environment variables: duplicate `.env.example` to `.env.local`, add your `OPENAI_API_KEY` and `GEMINI_API_KEY`, set `GOOGLE_GENERATIVE_AI_API_KEY` if Gemini still errors, optionally set `MEMORAIZ_MODEL=google/gemini-1.5-flash-latest`, and add your `POSTGRES_URL` for conversation history + pgvector.
 
 1. Install dependencies: `pnpm install`.
 
@@ -23,8 +23,8 @@ Split-screen onboarding experience with a live company profile canvas and a Mast
 
 ## Notes
 
-- The onboarding agent API lives in `app/api/chat/route.ts` (legacy: `app/api/agent/route.ts`).
-- The live canvas is in `app/page.tsx`.
+- The onboarding chat API lives in `app/api/chat/route.ts` (agent proxy in `app/api/agent/route.ts`).
+- The split-screen UI shell is in `app/page.tsx`.
 - Profile endpoint is `app/api/profile/route.ts`.
 - Postgres schema is in `lib/db/schema.sql`.
 - Postgres helper is `scripts/apply-schema.ts` (loads `.env.local`).
