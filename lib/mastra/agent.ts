@@ -1,18 +1,23 @@
 import { Agent } from "@mastra/core/agent";
 import { updateProfileTool, searchMemoraizDocsTool } from "./tools";
 import type { CompanyProfile } from "../store/profileStore";
+import { env, hasLlmKey, requireProductionEnv } from "@/lib/env";
 
-if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+requireProductionEnv();
+
+if (!env.GOOGLE_GENERATIVE_AI_API_KEY) {
+  const geminiKey = env.GEMINI_API_KEY?.trim();
   if (geminiKey) {
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = geminiKey;
   }
 }
 
 function resolveModel() {
-  const envModel = process.env.MEMORAIZ_MODEL?.trim();
-  const hasOpenAIKey = Boolean(process.env.OPENAI_API_KEY?.trim());
-  const hasGeminiKey = Boolean(process.env.GEMINI_API_KEY?.trim());
+  const envModel = env.MEMORAIZ_MODEL?.trim();
+  const hasOpenAIKey = Boolean(env.OPENAI_API_KEY?.trim());
+  const hasGeminiKey = Boolean(
+    env.GEMINI_API_KEY?.trim() || env.GOOGLE_GENERATIVE_AI_API_KEY?.trim(),
+  );
   const fallbackModel = hasOpenAIKey
     ? "openai/gpt-4o-mini"
     : hasGeminiKey
@@ -32,6 +37,9 @@ Prioritize collecting: company name, industry, description, AI maturity level, c
 `;
 
 export function createOnboardingAgent() {
+  if (!hasLlmKey && env.NODE_ENV === "production") {
+    throw new Error("LLM API key is required in production.");
+  }
   return new Agent({
     id: "memoraiz-onboarding-agent",
     name: "Memoraiz Onboarding Assistant",

@@ -4,7 +4,7 @@ import { runChat } from "@/lib/api/chatService";
 import type { CompanyProfile } from "@/lib/store/profileStore";
 import { hasLlmKey } from "@/lib/env";
 
-interface AgentRequestBody {
+interface ChatRequestBody {
   message: string;
   conversationId?: string;
   stableUserId?: string;
@@ -13,7 +13,7 @@ interface AgentRequestBody {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as AgentRequestBody;
+  const body = (await request.json()) as ChatRequestBody;
 
   if (!body.message?.trim()) {
     return NextResponse.json({ error: "Missing message" }, { status: 400 });

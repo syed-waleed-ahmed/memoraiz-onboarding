@@ -21,6 +21,7 @@ Split-screen onboarding experience with a live company profile canvas and a Mast
 
 3. Run the dev server:
 	- `pnpm dev`
+	- Or run with Vercel locally: `vercel dev`
 
 4. (Optional) Ingest docs into pgvector:
 	- `pnpm ingest:docs`
@@ -30,6 +31,18 @@ Split-screen onboarding experience with a live company profile canvas and a Mast
 
 6. Run tests:
 	- `pnpm test`
+
+## Vercel Local Development
+
+You can run the app locally using Vercel's dev server to match the production
+runtime:
+
+1. Install the Vercel CLI if you have not already:
+	- `npm i -g vercel`
+2. Ensure your `.env.local` contains `POSTGRES_URL` and at least one LLM key:
+	- `OPENAI_API_KEY` or `GEMINI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`
+3. Start the local Vercel dev server:
+	- `vercel dev`
 
 ## Notes
 

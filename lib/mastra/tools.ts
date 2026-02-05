@@ -10,6 +10,7 @@ import { upsertProfile } from "../db/profileRepo";
 import { embedText } from "./embeddings";
 import { searchDocuments } from "../db/vectorRepo";
 import { searchLocalDocs } from "./docs";
+import { env } from "@/lib/env";
 
 const profileFieldSchema = z.enum([
   "name",
@@ -40,7 +41,8 @@ export const updateProfileTool = createTool({
     }),
   }),
   requestContextSchema: z.object({
-    sessionId: z.string(),
+    conversationId: z.string(),
+    stableUserId: z.string().optional(),
     profile: z
       .object({
         name: z.string(),
@@ -54,22 +56,32 @@ export const updateProfileTool = createTool({
   }),
   execute: async (input, context) => {
     const requestContext = context.requestContext;
-    const sessionId = requestContext?.get("sessionId") as string | undefined;
+    const conversationId = requestContext?.get("conversationId") as
+      | string
+      | undefined;
+    const stableUserId = requestContext?.get("stableUserId") as
+      | string
+      | undefined;
     const currentProfile = requestContext?.get("profile") as
       | CompanyProfile
       | undefined;
 
-    if (!sessionId) {
+    if (!conversationId) {
       return { ok: false, profile: getProfile("anonymous") };
     }
 
     if (currentProfile) {
-      setProfile(sessionId, currentProfile);
+      setProfile(conversationId, currentProfile);
     }
 
-    const updated = updateProfileField(sessionId, input.field, input.value);
+    const updated = updateProfileField(
+      conversationId,
+      input.field,
+      input.value,
+    );
 
-    await upsertProfile(sessionId, sessionId, updated).catch(() => null);
+    const userId = stableUserId ?? conversationId;
+    await upsertProfile(conversationId, userId, updated).catch(() => null);
 
     return { ok: true, profile: updated };
   },
@@ -95,7 +107,7 @@ export const searchMemoraizDocsTool = createTool({
   execute: async (input) => {
     const limit = input.limit ?? 5;
 
-    if (process.env.POSTGRES_URL?.trim() && process.env.OPENAI_API_KEY?.trim()) {
+    if (env.POSTGRES_URL?.trim() && env.OPENAI_API_KEY?.trim()) {
       const embedding = await embedText(input.query);
       const results = await searchDocuments(embedding, limit);
       if (results.length > 0) {

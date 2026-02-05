@@ -1,17 +1,25 @@
 import { NextResponse } from "next/server";
-import { getProfile, setProfile, type CompanyProfile } from "@/lib/store/profileStore";
+import {
+  getProfile,
+  setProfile,
+  type CompanyProfile,
+} from "@/lib/store/profileStore";
 import { getProfileById, upsertProfile } from "@/lib/db/profileRepo";
+import { env } from "@/lib/env";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const sessionId = searchParams.get("sessionId");
+  const conversationId = searchParams.get("conversationId");
 
-  if (!sessionId) {
-    return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
+  if (!conversationId) {
+    return NextResponse.json(
+      { error: "Missing conversationId" },
+      { status: 400 },
+    );
   }
 
-  if (process.env.POSTGRES_URL?.trim()) {
-    const dbProfile = await getProfileById(sessionId);
+  if (env.POSTGRES_URL?.trim()) {
+    const dbProfile = await getProfileById(conversationId);
     if (dbProfile) {
       const profile = {
         name: dbProfile.name ?? "",
@@ -25,24 +33,27 @@ export async function GET(request: Request) {
     }
   }
 
-  const profile = getProfile(sessionId);
+  const profile = getProfile(conversationId);
   return NextResponse.json({ profile });
 }
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
-    sessionId?: string;
+    conversationId?: string;
+    stableUserId?: string;
+    tabSessionId?: string;
     profile?: CompanyProfile;
   };
 
-  if (!body.sessionId || !body.profile) {
+  if (!body.conversationId || !body.profile) {
     return NextResponse.json({ error: "Missing data" }, { status: 400 });
   }
 
-  setProfile(body.sessionId, body.profile);
+  setProfile(body.conversationId, body.profile);
 
-  if (process.env.POSTGRES_URL?.trim()) {
-    await upsertProfile(body.sessionId, body.sessionId, body.profile).catch(
+  if (env.POSTGRES_URL?.trim()) {
+    const userId = body.stableUserId ?? body.conversationId;
+    await upsertProfile(body.conversationId, userId, body.profile).catch(
       () => null,
     );
   }
