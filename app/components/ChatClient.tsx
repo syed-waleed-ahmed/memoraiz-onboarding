@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   getOrCreateStableUserId,
   getOrCreateTabSessionId,
+  getStoredActiveConversationId,
+  clearStoredActiveConversationId,
   setTabSessionId,
+  setStoredActiveConversationId,
 } from "@/lib/session";
 
 type ChatRole = "assistant" | "user" | "system" | "tool";
@@ -86,6 +89,33 @@ export default function ChatClient() {
     setTabSession(tab);
   }, []);
 
+  const loadConversationById = useCallback(
+    async (conversationId: string, options?: { replaceUrl?: boolean }) => {
+      if (!stableUserId) return false;
+      const response = await fetch(
+        `/api/conversations/${conversationId}?stableUserId=${stableUserId}&tabSessionId=${tabSessionId ?? ""}`,
+      );
+      if (!response.ok) return false;
+      const data = (await response.json()) as {
+        conversation: ConversationMeta;
+        messages: ChatMessage[];
+        profile: CompanyProfile;
+      };
+      setActiveConversationId(data.conversation.id);
+      setMessages(data.messages ?? []);
+      setProfile(data.profile ?? EMPTY_PROFILE);
+      setTabSessionId(data.conversation.tabSessionId);
+      setTabSession(data.conversation.tabSessionId);
+      setStoredActiveConversationId(data.conversation.id);
+      if (options?.replaceUrl) {
+        router.replace("/");
+      }
+      window.dispatchEvent(new CustomEvent("memoraiz:conversations-updated"));
+      return true;
+    },
+    [router, stableUserId, tabSessionId],
+  );
+
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
     const handleChange = () => setIsCompact(media.matches);
@@ -112,39 +142,37 @@ export default function ChatClient() {
       setActiveConversationId(data.conversation.id);
       setMessages(data.messages ?? []);
       setProfile(data.profile ?? EMPTY_PROFILE);
-      if (!queryConversationId || queryConversationId !== data.conversation.id) {
-        router.replace(`/?c=${data.conversation.id}`);
-      }
+      setStoredActiveConversationId(data.conversation.id);
       window.dispatchEvent(new CustomEvent("memoraiz:conversations-updated"));
     }
 
-    if (!queryConversationId) {
+    const storedConversationId = getStoredActiveConversationId();
+    if (!queryConversationId && storedConversationId && !activeConversationId) {
+      void (async () => {
+        const loaded = await loadConversationById(storedConversationId);
+        if (!loaded) {
+          clearStoredActiveConversationId();
+          await bootstrapConversation();
+        }
+      })();
+      return;
+    }
+
+    if (!queryConversationId && !activeConversationId) {
       void bootstrapConversation();
     }
-  }, [stableUserId, tabSessionId, queryConversationId, router]);
+  }, [
+    activeConversationId,
+    loadConversationById,
+    queryConversationId,
+    stableUserId,
+    tabSessionId,
+  ]);
 
   useEffect(() => {
-    if (!queryConversationId || !stableUserId) return;
-
-    async function loadConversation() {
-      const response = await fetch(
-        `/api/conversations/${queryConversationId}?stableUserId=${stableUserId}&tabSessionId=${tabSessionId ?? ""}`,
-      );
-      if (!response.ok) return;
-      const data = (await response.json()) as {
-        conversation: ConversationMeta;
-        messages: ChatMessage[];
-        profile: CompanyProfile;
-      };
-      setActiveConversationId(data.conversation.id);
-      setMessages(data.messages ?? []);
-      setProfile(data.profile ?? EMPTY_PROFILE);
-      setTabSessionId(data.conversation.tabSessionId);
-      setTabSession(data.conversation.tabSessionId);
-    }
-
-    void loadConversation();
-  }, [queryConversationId, stableUserId, tabSessionId]);
+    if (!queryConversationId) return;
+    void loadConversationById(queryConversationId, { replaceUrl: true });
+  }, [loadConversationById, queryConversationId]);
 
   useEffect(() => {
     const shell = document.getElementById("chat-shell");
@@ -347,10 +375,10 @@ export default function ChatClient() {
       <section className="panel flex h-auto flex-1 flex-col border-b border-white/10 min-h-[420px] lg:h-full lg:min-h-0 lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between px-6 py-5">
           <div>
-            <h2 className="heading-font text-lg font-semibold text-slate-100">
+            <h2 className="section-title heading-font text-lg font-semibold text-slate-100">
               Onboarding Chat
             </h2>
-            <p className="text-sm text-slate-400">
+            <p className="section-subtitle text-sm text-slate-400">
               The assistant interviews your team and fills the canvas.
             </p>
           </div>
@@ -362,10 +390,10 @@ export default function ChatClient() {
         <div className="flex-1 min-h-0 space-y-4 overflow-y-auto px-6 pb-6 blend-scroll">
           {messages.length === 0 && (
             <div className="panel-card p-6">
-              <h3 className="heading-font text-2xl font-semibold text-slate-100">
+              <h3 className="hero-title heading-font text-2xl font-semibold text-slate-100">
                 Hi there, where should we start?
               </h3>
-              <p className="mt-2 text-sm text-slate-400">
+              <p className="section-subtitle mt-2 text-sm text-slate-400">
                 Share a few details and I will update the canvas in real time.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
@@ -373,7 +401,7 @@ export default function ChatClient() {
                   <button
                     key={label}
                     onClick={() => setInput(label)}
-                    className="chip rounded-full px-4 py-2 text-xs font-medium text-slate-200 transition hover:border-white/30 hover:bg-white/5"
+                    className="chip rounded-full px-4 py-2 text-xs font-medium text-slate-200"
                   >
                     {label}
                   </button>
@@ -388,14 +416,14 @@ export default function ChatClient() {
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[75%] rounded-2xl border px-4 py-3 text-sm leading-relaxed ${
+                className={`message-bubble max-w-[75%] rounded-2xl border px-4 py-3 text-sm leading-relaxed ${
                   message.role === "user"
                     ? "message-user text-white"
                     : "message-assistant text-slate-200"
                 }`}
               >
                 <p>{message.content}</p>
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="message-meta mt-2 text-xs text-slate-500">
                   {formatTimestamp(message.createdAt)}
                 </p>
               </div>
@@ -445,10 +473,10 @@ export default function ChatClient() {
       <section className="panel flex h-auto flex-1 flex-col px-6 py-6 min-h-[420px] lg:h-full lg:min-h-0">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="heading-font text-lg font-semibold text-slate-100">
+            <h2 className="section-title heading-font text-lg font-semibold text-slate-100">
               Company Canvas
             </h2>
-            <p className="text-sm text-slate-400">
+            <p className="section-subtitle text-sm text-slate-400">
               Review or refine the profile as the agent learns.
             </p>
           </div>
@@ -468,12 +496,12 @@ export default function ChatClient() {
               { key: "goals", label: "Goals" },
             ] as const
           ).map(({ key, label }) => (
-            <label key={key} className="block text-xs uppercase text-slate-500">
+            <label key={key} className="label-caps block text-xs uppercase text-slate-500">
               {label}
               <textarea
                 value={profile[key]}
                 onChange={(event) => applyProfileUpdate(key, event.target.value)}
-                className="mt-2 min-h-[78px] w-full rounded-2xl border border-white/10 bg-[#121722] px-4 py-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 transition focus:border-white/30"
+                className="canvas-input mt-2 min-h-[78px] w-full rounded-2xl border border-white/10 bg-[var(--surface-2)] px-4 py-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 transition focus:border-white/30"
                 placeholder={`Add ${label.toLowerCase()}...`}
                 disabled={!canEditForm}
               />

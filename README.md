@@ -2,6 +2,13 @@
 
 Split-screen onboarding experience with a live company profile canvas and a Mastra-powered interview agent.
 
+## Highlights
+
+- Per-tab chat sessions with persistent conversation history.
+- Sidebar conversation hub with rename/delete flows.
+- Real-time company canvas synced to the chat.
+- Light/dark theme toggle with theme-aware styling.
+
 ## Requirements
 
 - Node.js 20+
@@ -9,7 +16,7 @@ Split-screen onboarding experience with a live company profile canvas and a Mast
 
 ## Setup
 
-1. Copy environment variables: duplicate `.env.example` to `.env.local`, add your `OPENAI_API_KEY` and `GEMINI_API_KEY`, set `GOOGLE_GENERATIVE_AI_API_KEY` if Gemini still errors, optionally set `MEMORAIZ_MODEL=google/gemini-1.5-flash-latest`, and add your `POSTGRES_URL` for conversation history + pgvector.
+1. Copy environment variables: duplicate `.env.example` to `.env.local`, then fill the values listed in the next section.
 
 1. Install dependencies: `pnpm install`.
 
@@ -21,6 +28,22 @@ Split-screen onboarding experience with a live company profile canvas and a Mast
 
 1. Run tests: `pnpm test`.
 
+## Environment variables
+
+Set these in `.env.local` (values depend on your provider and deployment target):
+
+- `POSTGRES_URL` (required for conversation history + canvas storage)
+- `OPENAI_API_KEY` (OpenAI support)
+- `GEMINI_API_KEY` (Gemini support)
+- `GOOGLE_GENERATIVE_AI_API_KEY` (Gemini fallback if needed)
+- `MEMORAIZ_MODEL` (optional; example: `google/gemini-1.5-flash-latest`)
+
+## Database setup
+
+- Schema lives in `lib/db/schema.sql`.
+- Apply locally with `pnpm tsx scripts/apply-schema.ts`.
+- Uses `pgcrypto` for UUIDs and includes conversations, messages, profiles, and documents.
+
 ## Notes
 
 - The onboarding chat API lives in `app/api/chat/route.ts` (agent proxy in `app/api/agent/route.ts`).
@@ -30,3 +53,10 @@ Split-screen onboarding experience with a live company profile canvas and a Mast
 - Postgres helper is `scripts/apply-schema.ts` (loads `.env.local`).
 - Local doc fallback uses markdown and PDF files in the project root (or the two included Memoraiz docs).
 - CI runs lint, tests, and build via GitHub Actions. Vercel deploy uses repository secrets.
+
+## Scripts
+
+- `pnpm dev` - run the dev server.
+- `pnpm build` - production build.
+- `pnpm test` - test runner.
+- `pnpm ingest:docs` - optional pgvector document ingestion.
