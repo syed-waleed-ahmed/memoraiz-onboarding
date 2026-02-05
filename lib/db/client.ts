@@ -1,7 +1,5 @@
 import { Pool } from "pg";
-import { env, requireProductionEnv } from "@/lib/env";
-
-requireProductionEnv();
+import { env } from "@/lib/env";
 
 let pool: Pool | null = null;
 

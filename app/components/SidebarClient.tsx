@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   getOrCreateStableUserId,
@@ -66,14 +66,17 @@ export default function SidebarClient() {
     [conversations],
   );
 
-  async function refreshConversations(userId: string) {
-    const response = await fetch(
-      `/api/conversations?stableUserId=${userId}&tabSessionId=${tabSessionId ?? ""}`,
-    );
-    if (!response.ok) return;
-    const data = (await response.json()) as { conversations: ConversationMeta[] };
-    setConversations(data.conversations ?? []);
-  }
+  const refreshConversations = useCallback(
+    async (userId: string) => {
+      const response = await fetch(
+        `/api/conversations?stableUserId=${userId}&tabSessionId=${tabSessionId ?? ""}`,
+      );
+      if (!response.ok) return;
+      const data = (await response.json()) as { conversations: ConversationMeta[] };
+      setConversations(data.conversations ?? []);
+    },
+    [tabSessionId],
+  );
 
   useEffect(() => {
     if (!stableUserId) return;
@@ -84,7 +87,7 @@ export default function SidebarClient() {
     };
     window.addEventListener("memoraiz:conversations-updated", handleRefresh);
     return () => window.removeEventListener("memoraiz:conversations-updated", handleRefresh);
-  }, [stableUserId, tabSessionId]);
+  }, [stableUserId, tabSessionId, refreshConversations]);
 
   async function handleNewConversation() {
     if (!stableUserId) return;

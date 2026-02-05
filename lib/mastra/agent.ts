@@ -1,9 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 import { updateProfileTool, searchMemoraizDocsTool } from "./tools";
 import type { CompanyProfile } from "../store/profileStore";
-import { env, hasLlmKey, requireProductionEnv } from "@/lib/env";
-
-requireProductionEnv();
+import { env, hasLlmKey } from "@/lib/env";
 
 if (!env.GOOGLE_GENERATIVE_AI_API_KEY) {
   const geminiKey = env.GEMINI_API_KEY?.trim();
@@ -37,7 +35,8 @@ Prioritize collecting: company name, industry, description, AI maturity level, c
 `;
 
 export function createOnboardingAgent() {
-  if (!hasLlmKey && env.NODE_ENV === "production") {
+  const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+  if (!hasLlmKey && env.NODE_ENV === "production" && !isBuildPhase) {
     throw new Error("LLM API key is required in production.");
   }
   return new Agent({
