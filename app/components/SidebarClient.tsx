@@ -10,6 +10,7 @@ import {
   setTabSessionId,
   setStoredActiveConversationId,
 } from "@/lib/session";
+import { prefetchConversation } from "@/lib/ui/conversationCache";
 
 type ConversationMeta = {
   id: string;
@@ -88,6 +89,18 @@ export default function SidebarClient() {
     [conversations],
   );
 
+  const prefetchById = useCallback(
+    async (conversation: ConversationMeta) => {
+      if (!stableUserId) return;
+      await prefetchConversation({
+        conversationId: conversation.id,
+        stableUserId,
+        tabSessionId: conversation.tabSessionId,
+      });
+    },
+    [stableUserId],
+  );
+
   const refreshConversations = useCallback(
     async (userId: string) => {
       const response = await fetch(
@@ -113,6 +126,31 @@ export default function SidebarClient() {
     return () => window.removeEventListener("memoraiz:conversations-updated", handleRefresh);
   }, [stableUserId, tabSessionId, refreshConversations]);
 
+  useEffect(() => {
+    if (!stableUserId || conversations.length === 0) return;
+    const mostRecent = [...conversations]
+      .sort((a, b) => {
+        const left = new Date(a.lastMessageAt ?? a.updatedAt).getTime();
+        const right = new Date(b.lastMessageAt ?? b.updatedAt).getTime();
+        return right - left;
+      })
+      .slice(0, 3);
+
+    const idle = (callback: () => void) => {
+      if ("requestIdleCallback" in window) {
+        window.requestIdleCallback(callback);
+      } else {
+        window.setTimeout(callback, 200);
+      }
+    };
+
+    idle(() => {
+      mostRecent.forEach((conversation) => {
+        void prefetchById(conversation);
+      });
+    });
+  }, [conversations, prefetchById, stableUserId]);
+
   async function handleNewConversation() {
     if (!stableUserId) return;
     const response = await fetch("/api/conversations/new", {
@@ -131,6 +169,12 @@ export default function SidebarClient() {
     setActiveConversationId(data.conversation.id);
     router.replace(`/?c=${data.conversation.id}`);
     window.dispatchEvent(new CustomEvent("memoraiz:conversations-updated"));
+  }
+
+  function handleSelectConversation(conversation: ConversationMeta) {
+    setActiveConversationId(conversation.id);
+    setStoredActiveConversationId(conversation.id);
+    router.replace(`/?c=${conversation.id}`);
   }
 
   async function handleDelete(conversationId: string, conversationTabSessionId?: string) {
@@ -246,7 +290,9 @@ export default function SidebarClient() {
                     />
                   ) : (
                     <button
-                      onClick={() => router.replace(`/?c=${conversation.id}`)}
+                      onClick={() => handleSelectConversation(conversation)}
+                      onMouseEnter={() => void prefetchById(conversation)}
+                      onFocus={() => void prefetchById(conversation)}
                       className="flex-1 truncate text-left"
                     >
                       {conversation.title}

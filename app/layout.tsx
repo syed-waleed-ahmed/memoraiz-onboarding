@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "Memoraiz Onboarding Assistant",
   description:
     "Memoraiz corporate onboarding assistant with live canvas profile builder.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

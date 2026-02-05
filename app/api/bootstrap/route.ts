@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  createConversation,
-  findConversationBySession,
-} from "@/lib/db/conversationRepo";
+import { findConversationBySession } from "@/lib/db/conversationRepo";
 import { listMessages } from "@/lib/db/messageRepo";
 import { getProfileById } from "@/lib/db/profileRepo";
 import {
@@ -37,18 +34,10 @@ export async function POST(request: Request) {
   }
 
   let conversation = await findConversationBySession(stableUserId, tabSessionId);
-  if (!conversation) {
-    conversation = await createConversation(stableUserId, tabSessionId);
-  }
-
-  if (!conversation) {
-    return NextResponse.json({ error: "Conversation create failed" }, { status: 500 });
-  }
-
-  const messages = await listMessages(conversation.id);
+  const messages = conversation ? await listMessages(conversation.id) : [];
 
   let profile: CompanyProfile | null = null;
-  if (process.env.POSTGRES_URL?.trim()) {
+  if (process.env.POSTGRES_URL?.trim() && conversation) {
     const dbProfile = await getProfileById(conversation.id);
     if (dbProfile) {
       profile = mapProfileFromDb(dbProfile as Record<string, unknown>);
@@ -57,7 +46,7 @@ export async function POST(request: Request) {
   }
 
   if (!profile) {
-    profile = getProfile(conversation.id);
+    profile = conversation ? getProfile(conversation.id) : getProfile("anonymous");
   }
 
   return NextResponse.json({

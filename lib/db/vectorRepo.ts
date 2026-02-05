@@ -2,6 +2,7 @@ import { getPool } from "./client";
 
 export interface VectorSearchResult {
   content: string;
+  title?: string | null;
   source?: string | null;
   score?: number;
 }
@@ -16,7 +17,7 @@ export async function searchDocuments(
   const vectorLiteral = `[${queryEmbedding.join(",")}]`;
 
   const result = await pool.query(
-    `select content, source, 1 - (embedding <=> $1) as score
+    `select content, title, source, 1 - (embedding <=> $1) as score
      from memoraiz_documents
      order by embedding <=> $1
      limit $2`,
@@ -25,6 +26,7 @@ export async function searchDocuments(
 
   return result.rows.map((row) => ({
     content: row.content as string,
+    title: row.title as string | null,
     source: row.source as string | null,
     score: row.score as number,
   }));

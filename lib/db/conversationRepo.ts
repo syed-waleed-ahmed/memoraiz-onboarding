@@ -56,7 +56,7 @@ export async function listConversations(stableUserId: string) {
   const result = await pool.query(
     `select id, stable_user_id, tab_session_id, title, created_at, updated_at, last_message_at, deleted_at
      from conversations
-     where stable_user_id = $1 and deleted_at is null
+     where stable_user_id = $1 and deleted_at is null and last_message_at is not null
      order by updated_at desc`,
     [stableUserId],
   );

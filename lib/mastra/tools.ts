@@ -21,6 +21,9 @@ const profileFieldSchema = z.enum([
   "goals",
 ]);
 
+const RAG_TOP_K = 7;
+const RAG_MIN_SIMILARITY = 0.16;
+
 export const updateProfileTool = createTool({
   id: "updateProfile",
   description:
@@ -99,19 +102,23 @@ export const searchMemoraizDocsTool = createTool({
     results: z.array(
       z.object({
         content: z.string(),
+        title: z.string().optional(),
         source: z.string().optional(),
         score: z.number().optional(),
       }),
     ),
   }),
   execute: async (input) => {
-    const limit = input.limit ?? 5;
+    const limit = input.limit ?? RAG_TOP_K;
 
     if (env.POSTGRES_URL?.trim() && env.OPENAI_API_KEY?.trim()) {
       const embedding = await embedText(input.query);
       const results = await searchDocuments(embedding, limit);
       if (results.length > 0) {
-        return { results };
+        const filtered = results.filter(
+          (item) => (item.score ?? 1) >= RAG_MIN_SIMILARITY,
+        );
+        return { results: filtered.length > 0 ? filtered : results };
       }
     }
 
