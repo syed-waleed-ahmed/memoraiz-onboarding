@@ -140,7 +140,7 @@ export default function SidebarClient() {
       if ("requestIdleCallback" in window) {
         window.requestIdleCallback(callback);
       } else {
-        window.setTimeout(callback, 200);
+        (window as Window).setTimeout(callback, 200);
       }
     };
 

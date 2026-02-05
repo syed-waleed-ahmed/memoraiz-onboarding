@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing session identifiers" }, { status: 400 });
   }
 
-  let conversation = await findConversationBySession(stableUserId, tabSessionId);
+  const conversation = await findConversationBySession(stableUserId, tabSessionId);
   const messages = conversation ? await listMessages(conversation.id) : [];
 
   let profile: CompanyProfile | null = null;
