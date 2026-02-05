@@ -7,7 +7,6 @@ import {
 } from "@/lib/store/profileStore";
 import { appendMessage } from "@/lib/db/messageRepo";
 import { getProfileById } from "@/lib/db/profileRepo";
-import { env } from "@/lib/env";
 
 function mapProfileFromDb(row: Record<string, unknown>): CompanyProfile {
   return {
@@ -29,7 +28,7 @@ export async function loadProfileForConversation(
     return fallbackProfile;
   }
 
-  if (env.POSTGRES_URL?.trim()) {
+  if (process.env.POSTGRES_URL?.trim()) {
     const dbProfile = await getProfileById(conversationId);
     if (dbProfile) {
       const profile = mapProfileFromDb(dbProfile as Record<string, unknown>);

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import ChatClient from "@/app/components/ChatClient";
 
 export default function ChatShell() {
@@ -9,7 +10,9 @@ export default function ChatShell() {
           data-has-messages="false"
           className="group flex h-full w-full flex-col min-h-0"
         >
-          <ChatClient />
+          <Suspense fallback={<div className="h-full w-full" />}>
+            <ChatClient />
+          </Suspense>
         </div>
       </div>
     </main>

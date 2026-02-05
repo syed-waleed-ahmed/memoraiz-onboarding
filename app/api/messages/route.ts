@@ -5,9 +5,15 @@ import { getConversationById } from "@/lib/db/conversationRepo";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const conversationId = searchParams.get("conversationId")?.trim();
+  const stableUserId = searchParams.get("stableUserId")?.trim();
 
-  if (!conversationId) {
-    return NextResponse.json({ error: "Missing conversationId" }, { status: 400 });
+  if (!conversationId || !stableUserId) {
+    return NextResponse.json({ error: "Missing data" }, { status: 400 });
+  }
+
+  const conversation = await getConversationById(stableUserId, conversationId);
+  if (!conversation) {
+    return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
   }
 
   const messages = await listMessages(conversationId);

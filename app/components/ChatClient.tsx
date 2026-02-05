@@ -64,7 +64,9 @@ export default function ChatClient() {
   const queryConversationId = searchParams.get("c");
   const [stableUserId, setStableUserId] = useState<string | null>(null);
   const [tabSessionId, setTabSession] = useState<string | null>(null);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(
+    null,
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [profile, setProfile] = useState<CompanyProfile>(EMPTY_PROFILE);
   const [input, setInput] = useState("");
@@ -142,7 +144,7 @@ export default function ChatClient() {
     }
 
     void loadConversation();
-  }, [queryConversationId, stableUserId]);
+  }, [queryConversationId, stableUserId, tabSessionId]);
 
   useEffect(() => {
     const shell = document.getElementById("chat-shell");
@@ -170,7 +172,7 @@ export default function ChatClient() {
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
     };
-  }, [isResizing]);
+  }, [isResizing, isCompact]);
 
   useEffect(() => {
     if (!isTyping || !activeConversationId) {
@@ -203,7 +205,10 @@ export default function ChatClient() {
   }, [isTyping, activeConversationId, stableUserId, tabSessionId]);
 
   const canSend = useMemo(
-    () => Boolean(input.trim() && !isTyping && activeConversationId && stableUserId && tabSessionId),
+    () =>
+      Boolean(
+        input.trim() && !isTyping && activeConversationId && stableUserId && tabSessionId,
+      ),
     [input, isTyping, activeConversationId, stableUserId, tabSessionId],
   );
 
@@ -331,9 +336,7 @@ export default function ChatClient() {
     }
   };
 
-  const gridColumns = isCompact
-    ? "1fr"
-    : `${leftWidth}% 12px ${100 - leftWidth}%`;
+  const gridColumns = isCompact ? "1fr" : `${leftWidth}% 12px ${100 - leftWidth}%`;
 
   return (
     <div
@@ -352,7 +355,7 @@ export default function ChatClient() {
             </p>
           </div>
           <div className="badge-ready rounded-full px-3 py-1 text-xs font-medium">
-            {isTyping ? "Assistant typing…" : "Ready"}
+            {isTyping ? "Assistant typing..." : "Ready"}
           </div>
         </div>
 
@@ -402,7 +405,7 @@ export default function ChatClient() {
           {isTyping && (
             <div className="flex justify-start">
               <div className="panel-soft px-4 py-3 text-sm text-slate-400">
-                Typing…
+                Typing...
               </div>
             </div>
           )}
@@ -419,7 +422,7 @@ export default function ChatClient() {
                   void handleSend();
                 }
               }}
-              placeholder="Share details about your company…"
+              placeholder="Share details about your company..."
               className="flex-1 bg-transparent text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none"
               disabled={isTyping}
             />

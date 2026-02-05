@@ -84,14 +84,14 @@ export default function SidebarClient() {
     };
     window.addEventListener("memoraiz:conversations-updated", handleRefresh);
     return () => window.removeEventListener("memoraiz:conversations-updated", handleRefresh);
-  }, [stableUserId]);
+  }, [stableUserId, tabSessionId]);
 
   async function handleNewConversation() {
     if (!stableUserId) return;
     const response = await fetch("/api/conversations/new", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stableUserId, tabSessionId: "" }),
+      body: JSON.stringify({ stableUserId, tabSessionId: tabSessionId ?? "" }),
     });
     if (!response.ok) return;
     const data = (await response.json()) as {

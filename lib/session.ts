@@ -1,22 +1,25 @@
+const STABLE_USER_KEY = "memoraiz-stable-user";
+const TAB_SESSION_KEY = "memoraiz-tab-session";
+
 export function getOrCreateStableUserId() {
-  const key = "memoraiz-stable-user";
-  const stored = window.localStorage.getItem(key);
+  if (typeof window === "undefined") return "";
+  const stored = window.localStorage.getItem(STABLE_USER_KEY);
   if (stored) return stored;
   const created = crypto.randomUUID();
-  window.localStorage.setItem(key, created);
+  window.localStorage.setItem(STABLE_USER_KEY, created);
   return created;
 }
 
 export function getOrCreateTabSessionId() {
-  const key = "memoraiz-tab-session";
-  const stored = window.sessionStorage.getItem(key);
+  if (typeof window === "undefined") return "";
+  const stored = window.sessionStorage.getItem(TAB_SESSION_KEY);
   if (stored) return stored;
   const created = crypto.randomUUID();
-  window.sessionStorage.setItem(key, created);
+  window.sessionStorage.setItem(TAB_SESSION_KEY, created);
   return created;
 }
 
 export function setTabSessionId(value: string) {
-  const key = "memoraiz-tab-session";
-  window.sessionStorage.setItem(key, value);
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(TAB_SESSION_KEY, value);
 }

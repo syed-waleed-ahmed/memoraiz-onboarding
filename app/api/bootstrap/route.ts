@@ -10,7 +10,6 @@ import {
   setProfile,
   type CompanyProfile,
 } from "@/lib/store/profileStore";
-import { env } from "@/lib/env";
 
 interface BootstrapRequestBody {
   stableUserId?: string;
@@ -49,7 +48,7 @@ export async function POST(request: Request) {
   const messages = await listMessages(conversation.id);
 
   let profile: CompanyProfile | null = null;
-  if (env.POSTGRES_URL?.trim()) {
+  if (process.env.POSTGRES_URL?.trim()) {
     const dbProfile = await getProfileById(conversation.id);
     if (dbProfile) {
       profile = mapProfileFromDb(dbProfile as Record<string, unknown>);

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import SidebarClient from "@/app/components/SidebarClient";
 
 export default function Sidebar() {
@@ -12,7 +13,9 @@ export default function Sidebar() {
         </div>
         <div className="mt-4 h-px w-14 rounded-full bg-gradient-to-r from-emerald-400/60 to-transparent" />
       </div>
-      <SidebarClient />
+      <Suspense fallback={<div className="flex-1" />}>
+        <SidebarClient />
+      </Suspense>
       <div className="mt-auto border-t border-white/10 px-6 py-4 text-sm text-slate-400">
         <button className="block w-full text-left transition hover:text-slate-200">
           Settings

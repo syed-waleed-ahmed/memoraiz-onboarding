@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getConversationById } from "@/lib/db/conversationRepo";
 import { runChat } from "@/lib/api/chatService";
 import type { CompanyProfile } from "@/lib/store/profileStore";
-import { hasLlmKey } from "@/lib/env";
 
 interface ChatRequestBody {
   message: string;
@@ -25,13 +24,6 @@ export async function POST(request: Request) {
 
   if (!stableUserId || !tabSessionId || !conversationId) {
     return NextResponse.json({ error: "Missing session identifiers" }, { status: 400 });
-  }
-
-  if (!hasLlmKey) {
-    return NextResponse.json(
-      { error: "LLM API key is not configured." },
-      { status: 500 },
-    );
   }
 
   const conversation = await getConversationById(stableUserId, conversationId);

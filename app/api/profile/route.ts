@@ -5,20 +5,16 @@ import {
   type CompanyProfile,
 } from "@/lib/store/profileStore";
 import { getProfileById, upsertProfile } from "@/lib/db/profileRepo";
-import { env } from "@/lib/env";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const conversationId = searchParams.get("conversationId");
 
   if (!conversationId) {
-    return NextResponse.json(
-      { error: "Missing conversationId" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Missing conversationId" }, { status: 400 });
   }
 
-  if (env.POSTGRES_URL?.trim()) {
+  if (process.env.POSTGRES_URL?.trim()) {
     const dbProfile = await getProfileById(conversationId);
     if (dbProfile) {
       const profile = {
@@ -51,7 +47,7 @@ export async function POST(request: Request) {
 
   setProfile(body.conversationId, body.profile);
 
-  if (env.POSTGRES_URL?.trim()) {
+  if (process.env.POSTGRES_URL?.trim()) {
     const userId = body.stableUserId ?? body.conversationId;
     await upsertProfile(body.conversationId, userId, body.profile).catch(
       () => null,

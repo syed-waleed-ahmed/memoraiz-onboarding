@@ -11,7 +11,6 @@ import {
   setProfile,
   type CompanyProfile,
 } from "@/lib/store/profileStore";
-import { env } from "@/lib/env";
 
 function mapProfileFromDb(row: Record<string, unknown>): CompanyProfile {
   return {
@@ -31,6 +30,7 @@ export async function GET(
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const stableUserId = searchParams.get("stableUserId")?.trim();
+  const tabSessionId = searchParams.get("tabSessionId")?.trim();
 
   if (!stableUserId) {
     return NextResponse.json({ error: "Missing stableUserId" }, { status: 400 });
@@ -41,10 +41,14 @@ export async function GET(
     return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
   }
 
+  if (tabSessionId && conversation.tabSessionId !== tabSessionId) {
+    return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+  }
+
   const messages = await listMessages(conversation.id);
 
   let profile: CompanyProfile | null = null;
-  if (env.POSTGRES_URL?.trim()) {
+  if (process.env.POSTGRES_URL?.trim()) {
     const dbProfile = await getProfileById(conversation.id);
     if (dbProfile) {
       profile = mapProfileFromDb(dbProfile as Record<string, unknown>);
@@ -80,6 +84,13 @@ export async function PATCH(
     return NextResponse.json({ error: "Missing data" }, { status: 400 });
   }
 
+  if (body.tabSessionId) {
+    const conversation = await getConversationById(stableUserId, id);
+    if (!conversation || conversation.tabSessionId !== body.tabSessionId) {
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    }
+  }
+
   await renameConversation(stableUserId, id, title);
   return NextResponse.json({ ok: true });
 }
@@ -91,9 +102,17 @@ export async function DELETE(
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const stableUserId = searchParams.get("stableUserId")?.trim();
+  const tabSessionId = searchParams.get("tabSessionId")?.trim();
 
   if (!stableUserId) {
     return NextResponse.json({ error: "Missing stableUserId" }, { status: 400 });
+  }
+
+  if (tabSessionId) {
+    const conversation = await getConversationById(stableUserId, id);
+    if (!conversation || conversation.tabSessionId !== tabSessionId) {
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    }
   }
 
   await deleteConversation(stableUserId, id);
