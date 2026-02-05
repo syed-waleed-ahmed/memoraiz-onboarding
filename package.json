@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@libsql/client": "^0.17.0",
     "@mastra/core": "^1.1.0",
     "mastra": "^1.1.0",
     "next": "15.5.7",
