@@ -1,6 +1,3 @@
-import { Suspense } from "react";
-import SidebarClient from "@/app/components/SidebarClient";
-
 export default function Sidebar() {
   return (
     <aside className="sidebar-shell flex w-full flex-col lg:w-72 lg:shrink-0">
@@ -13,9 +10,9 @@ export default function Sidebar() {
         </div>
         <div className="mt-4 h-px w-14 rounded-full bg-gradient-to-r from-emerald-400/60 to-transparent" />
       </div>
-      <Suspense fallback={<div className="flex-1" />}>
-        <SidebarClient />
-      </Suspense>
+      <div className="flex-1 px-6 pb-6 pt-5 text-sm text-slate-400">
+        Conversation history loads in the main view.
+      </div>
       <div className="mt-auto border-t border-white/10 px-6 py-4 text-sm text-slate-400">
         <button className="block w-full text-left transition hover:text-slate-200">
           Settings
