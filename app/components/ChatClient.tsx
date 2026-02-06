@@ -14,6 +14,7 @@ import {
   getCachedConversation,
   setCachedConversation,
 } from "@/lib/ui/conversationCache";
+import confetti from "canvas-confetti";
 
 type ChatRole = "assistant" | "user" | "system" | "tool";
 
@@ -93,6 +94,8 @@ export default function ChatClient() {
   const [feedbackById, setFeedbackById] = useState<Record<string, "up" | "down">>(
     {},
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const streamingTimerRef = useRef<number | null>(null);
   const pollingTimerRef = useRef<number | null>(null);
@@ -299,7 +302,11 @@ export default function ChatClient() {
     [input, isTyping, activeConversationId, stableUserId, tabSessionId],
   );
 
-  const canEditForm = useMemo(() => !isTyping, [isTyping]);
+  const canEditForm = useMemo(() => !isTyping && !isSubmitting, [isTyping, isSubmitting]);
+
+  const isFormValid = useMemo(() => {
+    return Object.values(profile).every((value) => value && value.trim().length > 0);
+  }, [profile]);
 
   const stopStreaming = useCallback(() => {
     if (streamingTimerRef.current) {
@@ -524,18 +531,8 @@ export default function ChatClient() {
         conversationId: string;
         profile?: CompanyProfile;
       };
-
       if (data.profile) setProfile(data.profile);
       startStreamingReply(data.reply);
-
-      if (conversationId) {
-        setCachedConversation(conversationId, {
-          conversation: { id: conversationId, tabSessionId },
-          messages: [...messages, userMessage],
-          profile,
-          fetchedAt: Date.now(),
-        });
-      }
       window.dispatchEvent(new CustomEvent("memoraiz:conversations-updated"));
     } catch {
       setMessages((current) => [
@@ -609,14 +606,44 @@ export default function ChatClient() {
     [activeConversationId, isTyping, profile, stableUserId, tabSessionId, startStreamingReply],
   );
 
-  const handleRegenerate = async () => {
+  const handleRegenerate = async (assistantMessageId?: string) => {
     if (!activeConversationId || !stableUserId || !tabSessionId || isTyping) return;
-    const lastUserIndex = [...messages]
-      .map((message, index) => ({ message, index }))
-      .reverse()
-      .find((item) => item.message.role === "user");
-    if (!lastUserIndex) return;
-    void regenerateFromMessage(lastUserIndex.message.id, lastUserIndex.message.content);
+
+    let targetUserMessage: ChatMessage | undefined;
+    let keepMessages: ChatMessage[] = [];
+
+    if (assistantMessageId) {
+      // specific regeneration: find the assistant message, then the user message before it
+      const assistantIndex = messages.findIndex(m => m.id === assistantMessageId);
+      if (assistantIndex === -1) return;
+
+      // Slicing: we want to keep messages *before* the assistant message. 
+      // The user message should be the one immediately before ideally, or we find the last user message in that slice.
+      const messagesBefore = messages.slice(0, assistantIndex);
+      targetUserMessage = messagesBefore.findLast(m => m.role === "user");
+
+      if (!targetUserMessage) return;
+
+      const safeTarget = targetUserMessage;
+      // We keep everything up to the user message (inclusive)
+      const userIndex = messagesBefore.findIndex(m => m.id === safeTarget.id);
+      keepMessages = messagesBefore.slice(0, userIndex + 1);
+
+    } else {
+      // default behavior: last user message
+      targetUserMessage = messages.findLast(m => m.role === "user");
+      if (!targetUserMessage) return;
+
+      const safeTarget = targetUserMessage;
+      const userIndex = messages.findIndex(m => m.id === safeTarget.id);
+      keepMessages = messages.slice(0, userIndex + 1);
+    }
+
+    if (!targetUserMessage) return;
+
+    // Prune UI immediately
+    setMessages(keepMessages);
+    void regenerateFromMessage(targetUserMessage.id, targetUserMessage.content);
   };
 
   const gridColumns = isCompact ? "1fr" : `${leftWidth}% 12px ${100 - leftWidth}%`;
@@ -645,7 +672,7 @@ export default function ChatClient() {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto blend-scroll">
+        <div className="flex-1 min-h-0 overflow-y-auto blend-scroll no-scrollbar">
           <div className="chat-column mx-auto w-full space-y-4 px-6 pb-6">
             {messages.length === 0 && (
               <div className="panel-card p-5">
@@ -669,21 +696,18 @@ export default function ChatClient() {
             {visibleMessages.map((message) => (
               <div
                 key={message.id}
-                className={`message-row flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
+                className={`message-row flex ${message.role === "user" ? "justify-end" : "justify-start"
+                  }`}
               >
                 <div
-                  className={`message-stack flex max-w-[70%] flex-col gap-2 lg:max-w-[65%] ${
-                    message.role === "user" ? "items-end" : "items-start"
-                  }`}
+                  className={`message-stack flex max-w-[90%] flex-col gap-2 lg:max-w-[85%] ${message.role === "user" ? "items-end" : "items-start"
+                    }`}
                 >
                   <div
-                    className={`message-bubble group relative w-full rounded-2xl border px-4 py-3 text-sm leading-relaxed ${
-                      message.role === "user"
-                        ? "message-user text-white"
-                        : "message-assistant text-slate-200"
-                    }`}
+                    className={`message-bubble group relative w-full rounded-2xl border px-4 py-3 text-sm leading-relaxed ${message.role === "user"
+                      ? "message-user text-white"
+                      : "message-assistant text-slate-200"
+                      }`}
                   >
                     {editingMessageId === message.id ? (
                       <div className="space-y-2">
@@ -725,86 +749,109 @@ export default function ChatClient() {
 
                   {message.role !== "system" && !message.id.startsWith("welcome-") && (
                     <div
-                      className={`message-actions-inline ${
-                        message.role === "user" ? "justify-end" : "justify-start"
-                      }`}
+                      className={`message-actions-inline ${message.role === "user" ? "justify-end" : "justify-start"
+                        }`}
                     >
                       {message.role === "user" ? (
                         <>
                           <button
                             onClick={() => startEditingMessage(message)}
-                            className="theme-btn-icon"
+                            className="theme-btn-icon h-8 w-8 p-1.5"
                             disabled={isTyping}
                             aria-label="Edit message"
                             title="Edit"
                           >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M12 20h9" />
                               <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
                             </svg>
                           </button>
                           <button
                             onClick={() => handleCopy(message.id, message.content)}
-                            className="theme-btn-icon"
+                            className="theme-btn-icon h-8 w-8 p-1.5"
                             aria-label="Copy message"
                             title={copiedMessageId === message.id ? "Copied" : "Copy"}
                           >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <rect x="9" y="9" width="11" height="11" rx="2" />
-                              <rect x="4" y="4" width="11" height="11" rx="2" />
-                            </svg>
+                            {copiedMessageId === message.id ? (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            ) : (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                              </svg>
+                            )}
                           </button>
                         </>
                       ) : (
                         <>
                           <button
-                            onClick={handleRegenerate}
-                            className="theme-btn-icon"
+                            onClick={() => handleRegenerate(message.id)}
+                            className="theme-btn-icon h-8 w-8 p-1.5"
                             disabled={isTyping}
                             aria-label="Regenerate response"
                             title="Regenerate"
                           >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 12a9 9 0 1 1-6.21-8.85" />
                               <path d="M21 3v6h-6" />
                             </svg>
                           </button>
                           <button
                             onClick={() => handleCopy(message.id, message.content)}
-                            className="theme-btn-icon"
+                            className="theme-btn-icon h-8 w-8 p-1.5"
                             aria-label="Copy message"
                             title={copiedMessageId === message.id ? "Copied" : "Copy"}
                           >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <rect x="9" y="9" width="11" height="11" rx="2" />
-                              <rect x="4" y="4" width="11" height="11" rx="2" />
-                            </svg>
+                            {copiedMessageId === message.id ? (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            ) : (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                              </svg>
+                            )}
                           </button>
                           <button
                             onClick={() => toggleFeedback(message.id, "up")}
-                            className={`theme-btn-icon ${
-                              feedbackById[message.id] === "up" ? "is-active" : ""
-                            }`}
+                            className={`theme-btn-icon h-8 w-8 p-1.5 ${feedbackById[message.id] === "up" ? "is-active text-emerald-400" : ""
+                              }`}
                             aria-label="Like message"
                             title="Like"
                           >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h9a3 3 0 0 0 3-3v-6a2 2 0 0 0-2-2z" />
-                              <path d="M7 22H4a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1h3" />
-                            </svg>
+                            {feedbackById[message.id] === "up" ? (
+                              <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M7 10v12" />
+                                <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
+                              </svg>
+                            ) : (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M7 10v12" />
+                                <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
+                              </svg>
+                            )}
                           </button>
                           <button
                             onClick={() => toggleFeedback(message.id, "down")}
-                            className={`theme-btn-icon ${
-                              feedbackById[message.id] === "down" ? "is-active" : ""
-                            }`}
+                            className={`theme-btn-icon h-8 w-8 p-1.5 ${feedbackById[message.id] === "down" ? "is-active text-rose-400" : ""
+                              }`}
                             aria-label="Dislike message"
                             title="Dislike"
                           >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H8a3 3 0 0 0-3 3v6a2 2 0 0 0 2 2z" />
-                              <path d="M17 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1h-3" />
-                            </svg>
+                            {feedbackById[message.id] === "down" ? (
+                              <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M17 14V2" />
+                                <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z" />
+                              </svg>
+                            ) : (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M17 14V2" />
+                                <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z" />
+                              </svg>
+                            )}
                           </button>
                         </>
                       )}
@@ -879,8 +926,8 @@ export default function ChatClient() {
         className="divider-rail hidden cursor-col-resize lg:block"
       />
 
-      <section className="panel flex h-auto flex-1 flex-col px-6 py-6 min-h-[420px] lg:h-full lg:min-h-0">
-        <div className="flex items-center justify-between">
+      <section className="panel flex h-auto flex-1 flex-col min-h-[420px] lg:h-full lg:min-h-0 border-l border-white/5">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
           <div>
             <h2 className="section-title heading-font text-lg font-semibold text-slate-100">
               Company Canvas
@@ -895,21 +942,35 @@ export default function ChatClient() {
         </div>
 
         <form
-          className="mt-6 flex-1 min-h-0 space-y-3 overflow-y-auto pr-1 canvas-scroll"
+          className="mt-0 flex-1 min-h-0 space-y-2 overflow-y-auto pl-4 pr-6 canvas-scroll"
           onSubmit={async (e) => {
             e.preventDefault();
             if (!activeConversationId || !stableUserId) return;
-            await fetch("/api/profile", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                conversationId: activeConversationId,
-                stableUserId,
-                tabSessionId,
-                profile,
-              }),
-            });
-            // Optionally show a toast or confirmation here
+            setIsSubmitting(true);
+            try {
+              await fetch("/api/profile", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  conversationId: activeConversationId,
+                  stableUserId,
+                  tabSessionId,
+                  profile,
+                }),
+              });
+              setShowSuccess(true);
+              confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#34d399', '#38bdf8', '#ffffff']
+              });
+              setTimeout(() => setShowSuccess(false), 3000);
+            } catch {
+              // error handling could go here
+            } finally {
+              setIsSubmitting(false);
+            }
           }}
         >
           {([
@@ -936,17 +997,22 @@ export default function ChatClient() {
               />
             </label>
           ))}
-          <div className="pt-2 flex justify-end">
+          <div className="pt-2 flex flex-col items-end">
             <button
               type="submit"
-              className="formal-canvas-submit"
-              disabled={!canEditForm}
+              className="formal-canvas-submit disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!canEditForm || !isFormValid || isSubmitting}
             >
-              Submit
+              {showSuccess ? "Request Submitted" : isSubmitting ? "Saving..." : "Submit"}
             </button>
+            {showSuccess && (
+              <p className="mt-2 text-xs text-emerald-400">
+                Profile saved successfully!
+              </p>
+            )}
           </div>
         </form>
       </section>
-    </div>
+    </div >
   );
 }

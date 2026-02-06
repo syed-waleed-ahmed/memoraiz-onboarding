@@ -1,7 +1,20 @@
 import type { Metadata } from "next";
+import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-plus-jakarta",
+  display: "swap",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Memoraiz Onboarding Assistant",
@@ -19,15 +32,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"
-        />
-      </head>
-      <body className="antialiased" suppressHydrationWarning>
-        <SpeedInsights />
-        <Analytics />
+      <body
+        className={`${plusJakartaSans.variable} ${spaceGrotesk.variable} antialiased`}
+        suppressHydrationWarning
+      >
+        {process.env.NEXT_PUBLIC_VERCEL_ENV === "production" && (
+          <>
+            <SpeedInsights />
+            <Analytics />
+          </>
+        )}
+        <div className="pointer-events-none absolute inset-0 app-grid opacity-60" />
+        <div className="pointer-events-none absolute inset-0">
+          <div className="glow-orb absolute -top-32 left-1/4 h-[420px] w-[420px] rounded-full bg-emerald-400/10 blur-[80px]" />
+          <div className="glow-orb absolute -bottom-40 right-1/4 h-[380px] w-[380px] rounded-full bg-sky-400/10 blur-[80px]" />
+        </div>
         {children}
       </body>
     </html>

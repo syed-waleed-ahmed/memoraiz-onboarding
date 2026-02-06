@@ -13,6 +13,7 @@ create table if not exists company_profiles (
   updated_at timestamptz not null default now()
 );
 
+-- Documents for RAG (if used in future)
 create table if not exists memoraiz_documents (
   id uuid primary key,
   source text,
