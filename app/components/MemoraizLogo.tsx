@@ -1,3 +1,4 @@
+
 type MemoraizLogoProps = {
   className?: string;
   label?: string;
@@ -6,6 +7,7 @@ type MemoraizLogoProps = {
 export default function MemoraizLogo({ className, label = "Memoraiz" }: MemoraizLogoProps) {
   return (
     <div className={`logo-mark ${className ?? ""}`.trim()}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/memoraiz-logo.svg"
         alt={label}

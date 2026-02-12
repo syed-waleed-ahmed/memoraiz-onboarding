@@ -56,7 +56,14 @@ async function resolveDocFiles() {
   return entries.filter((file) => /\.(md|pdf)$/i.test(file));
 }
 
+// Global cache for document chunks to avoid re-parsing on every request
+let cachedChunks: DocChunk[] | null = null;
+
 export async function loadDocChunks() {
+  if (cachedChunks) {
+    return cachedChunks;
+  }
+
   const chunks: DocChunk[] = [];
 
   const files = await resolveDocFiles();
@@ -65,18 +72,23 @@ export async function loadDocChunks() {
     const filePath = join(process.cwd(), file);
     let normalized = "";
 
-    if (/\.pdf$/i.test(file)) {
-      const buffer = await readFile(filePath);
-      const { default: pdfParse } = (await import("pdf-parse")) as {
-        default: (data: Buffer | Uint8Array | ArrayBuffer) => Promise<{
-          text: string;
-        }>;
-      };
-      const parsed = await pdfParse(buffer);
-      normalized = parsed.text.replace(/\r\n/g, "\n").trim();
-    } else {
-      const text = await readFile(filePath, "utf8");
-      normalized = text.replace(/\r\n/g, "\n").trim();
+    try {
+      if (/\.pdf$/i.test(file)) {
+        const buffer = await readFile(filePath);
+        const { default: pdfParse } = (await import("pdf-parse")) as {
+          default: (data: Buffer | Uint8Array | ArrayBuffer) => Promise<{
+            text: string;
+          }>;
+        };
+        const parsed = await pdfParse(buffer);
+        normalized = parsed.text.replace(/\r\n/g, "\n").trim();
+      } else {
+        const text = await readFile(filePath, "utf8");
+        normalized = text.replace(/\r\n/g, "\n").trim();
+      }
+    } catch (error) {
+      console.error(`Error reading/parsing file ${file}:`, error);
+      continue;
     }
 
     if (!normalized) continue;
@@ -96,13 +108,24 @@ export async function loadDocChunks() {
     }
   }
 
+  cachedChunks = chunks;
   return chunks;
 }
 
-export async function searchLocalDocs(query: string, limit: number) {
-  const chunks = await loadDocChunks();
-  const needle = query.toLowerCase();
+// Global cache for search results to avoid re-scoring on identical queries
+const queryResultCache = new Map<string, (DocChunk & { score: number })[]>();
 
+export async function searchLocalDocs(query: string, limit: number) {
+  const needle = query.toLowerCase().trim();
+
+  // Check cache first
+  const cached = queryResultCache.get(needle);
+  if (cached) {
+    console.log(`[RAG Cache] Hit for query: "${needle}"`);
+    return cached.slice(0, limit);
+  }
+
+  const chunks = await loadDocChunks();
   const scored = chunks
     .map((chunk) => {
       const haystack = chunk.content.toLowerCase();
@@ -128,10 +151,15 @@ export async function searchLocalDocs(query: string, limit: number) {
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 
-  return scored.map((item) => ({
+  const results = scored.map((item) => ({
     content: item.content,
     title: item.title,
     source: item.source,
     score: item.score,
   }));
+
+  // Store in cache
+  queryResultCache.set(needle, results);
+
+  return results.slice(0, limit);
 }

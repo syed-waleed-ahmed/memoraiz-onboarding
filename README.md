@@ -8,11 +8,14 @@ Split-screen onboarding experience with a live company-profile canvas and an AI-
 - **Per-tab sessions** — each browser tab gets its own chat, with persistent conversation history.
 - **Sidebar conversation hub** — rename, delete, and switch between past conversations.
 - **Light / dark theme** — toggle with theme-aware styling throughout.
-- **RAG-powered answers** — retrieval-augmented generation using embedded Memoraiz docs.
 - **Real-time canvas sync** — profile fields update as the chat progresses.
 - **Mobile-ready** — tab switcher for seamless chat/canvas toggling on smaller screens.
-- **Auto-resizing inputs** — text areas expand smoothly as you type.
-- **Smooth, polished UI** — micro-animations, blended scrollbars, input focus glow, and responsive layout.
+- **Performance Optimized Stack**:
+    - **Parallel LLM Race**: Launches OpenAI and Gemini simultaneously; the fastest response wins.
+    - **Hybrid Caching**: Instant "Hero Answers" for common onboarding questions.
+    - **In-Memory RAG Caching**: Drastically reduces latency for knowledge retrieval.
+    - **Full Streaming**: Token-by-token delivery for zero perceived lag.
+- **Smooth, polished UI** — micro-animations, blended scrollbars, and responsive layout.
 
 ## Requirements
 

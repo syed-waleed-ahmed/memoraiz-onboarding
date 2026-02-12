@@ -38,7 +38,24 @@ If you are missing information, ask a focused follow-up question.
 Prioritize collecting: company name, industry, description, AI maturity level, current AI usage, and goals.
 `;
 
-export function createOnboardingAgent() {
+// Export a list of all available models based on env vars
+export function getAvailableModels() {
+  const models: string[] = [];
+
+  if (env.OPENAI_API_KEY?.trim()) {
+    models.push("openai/gpt-4o-mini");
+  }
+
+  // Gemini can be configured via GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY
+  if (env.GEMINI_API_KEY?.trim() || env.GOOGLE_GENERATIVE_AI_API_KEY?.trim()) {
+    models.push("google/gemini-1.5-flash-latest");
+  }
+
+  // If no keys are found, fall back to default (which might error later, but we list nothing here)
+  return models.length > 0 ? models : ["openai/gpt-4o-mini"];
+}
+
+export function createOnboardingAgent(model?: string) {
   const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
   if (!hasLlmKey && env.NODE_ENV === "production" && !isBuildPhase) {
     throw new Error("LLM API key is required in production.");
@@ -47,7 +64,7 @@ export function createOnboardingAgent() {
     id: "memoraiz-onboarding-agent",
     name: "Memoraiz Onboarding Assistant",
     instructions: SYSTEM_PROMPT,
-    model: resolveModel(),
+    model: model || resolveModel(),
     tools: {
       updateProfile: updateProfileTool,
       searchMemoraizDocs: searchMemoraizDocsTool,

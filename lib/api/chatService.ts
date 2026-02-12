@@ -98,6 +98,9 @@ export async function runChat({
   };
 }
 
+import { getAvailableModels } from "@/lib/mastra/agent";
+import { getHeroAnswer } from "./heroAnswers";
+
 export async function streamChat({
   message,
   conversationId,
@@ -118,30 +121,74 @@ export async function streamChat({
   requestContext.set("tabSessionId", tabSessionId);
   requestContext.set("profile", currentProfile);
 
-  const agent = createOnboardingAgent();
+  // Save user message once
   await appendMessage(stableUserId, conversationId, "user", message).catch(
     () => null,
   );
 
-  const streamResult = await agent.stream(
-    [
-      {
-        role: "system",
-        content: buildProfileContext(currentProfile),
-      },
-      {
-        role: "user",
-        content: message,
-      },
-    ],
-    { requestContext },
+  const messages = [
+    {
+      role: "system",
+      content: buildProfileContext(currentProfile),
+    },
+    {
+      role: "user",
+      content: message,
+    },
+  ];
+
+  // Get available models (e.g. OpenAI, Gemini)
+  const models = getAvailableModels();
+
+  // -- FAST PATH: Hero Answers --
+  const heroAnswer = getHeroAnswer(message);
+  if (heroAnswer) {
+    console.log(`[Fast Path] Hero Answer found for: "${message}"`);
+    const encoder = new TextEncoder();
+    return new ReadableStream({
+      async start(controller) {
+        controller.enqueue(encoder.encode(heroAnswer));
+        controller.close();
+        // Persist the message
+        await appendMessage(stableUserId, conversationId, "assistant", heroAnswer).catch(() => null);
+      }
+    });
+  }
+
+  // If no specific models found, use default (which handles fallback inside agent)
+  if (models.length === 0) {
+    models.push("");
+  }
+
+  // Create a promise for each model that resolves when the stream is ready
+  const streamPromises = models.map(async (modelId) => {
+    try {
+      const agent = createOnboardingAgent(modelId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await agent.stream(messages as any, { requestContext });
+      return { result, modelId };
+    } catch (error) {
+      console.error(`Error starting stream for model ${modelId}:`, error);
+      // Return a never-resolving promise or just throw to be caught by race?
+      // Better to return null and filter out
+      return null;
+    }
+  });
+
+  // Race to get the first successful stream start
+  // We need to handle cases where one might fail
+  const winningStream = await Promise.any(
+    streamPromises.map(p => p.then(res => {
+      if (!res) throw new Error("Stream failed to start");
+      return res;
+    }))
   );
 
-  // Assumes streamResult has a textStream (AsyncIterable<string>)
-  const textStream = streamResult.textStream;
+  console.log(`[Race] Winner: ${winningStream.modelId}`);
 
-  let fullText = "";
+  const textStream = winningStream.result.textStream;
   const encoder = new TextEncoder();
+  let fullText = "";
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -155,7 +202,6 @@ export async function streamChat({
       } catch (e) {
         controller.error(e);
       } finally {
-        // Persist the full message after stream ends
         if (fullText) {
           await appendMessage(stableUserId, conversationId, "assistant", fullText).catch(
             () => null,
