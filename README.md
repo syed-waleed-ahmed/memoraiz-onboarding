@@ -10,6 +10,8 @@ Split-screen onboarding experience with a live company-profile canvas and an AI-
 - **Light / dark theme** — toggle with theme-aware styling throughout.
 - **RAG-powered answers** — retrieval-augmented generation using embedded Memoraiz docs.
 - **Real-time canvas sync** — profile fields update as the chat progresses.
+- **Mobile-ready** — tab switcher for seamless chat/canvas toggling on smaller screens.
+- **Auto-resizing inputs** — text areas expand smoothly as you type.
 - **Smooth, polished UI** — micro-animations, blended scrollbars, input focus glow, and responsive layout.
 
 ## Requirements
