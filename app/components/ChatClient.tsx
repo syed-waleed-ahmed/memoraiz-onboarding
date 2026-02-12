@@ -16,6 +16,7 @@ import {
 } from "@/lib/ui/conversationCache";
 import confetti from "canvas-confetti";
 
+
 type ChatRole = "assistant" | "user" | "system" | "tool";
 
 interface ChatMessage {
@@ -54,14 +55,14 @@ const EMPTY_PROFILE: CompanyProfile = {
 };
 
 const PROMPT_CHIPS = [
-  "Summarize our company in two sentences.",
-  "We build SaaS tools for retail analytics.",
-  "Our AI maturity is early experimentation.",
-  "We want to reduce onboarding time by 50%.",
+  "What is MemorAIz and how can it help my company?",
+  "What details do I need to provide for the Company Canvas?",
+  "How do I define my company's AI maturity level?",
+  "What are some common onboarding goals I should consider?",
 ];
 
 const WELCOME_MESSAGE =
-  "Hi! I’m the Memoraiz Onboarding Assistant — let’s build your company profile. What’s your company name?";
+  "Ciao! I’m the Memoraiz Onboarding Assistant — let’s build your company profile. What’s your company name?";
 
 function formatTimestamp(value?: string) {
   if (!value) return "Now";
@@ -84,13 +85,14 @@ export default function ChatClient() {
   const [input, setInput] = useState("");
   const [queuedInput, setQueuedInput] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
-  const [leftWidth, setLeftWidth] = useState(52);
+  const [leftWidth, setLeftWidth] = useState(60);
   const [isResizing, setIsResizing] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
+  const [activeTab, setActiveTab] = useState<"chat" | "canvas">("chat");
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState("");
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [, setOpenMenuId] = useState<string | null>(null);
   const [feedbackById, setFeedbackById] = useState<Record<string, "up" | "down">>(
     {},
   );
@@ -102,6 +104,7 @@ export default function ChatClient() {
   const saveTimerRef = useRef<number | null>(null);
   const copyTimerRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const dividerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const stable = getOrCreateStableUserId();
@@ -242,27 +245,55 @@ export default function ChatClient() {
     });
   }, [activeConversationId, messages, profile, tabSessionId]);
 
+  const handleDividerPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (isCompact) return;
+      e.preventDefault();
+      const el = e.currentTarget;
+      el.setPointerCapture(e.pointerId);
+      setIsResizing(true);
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = "col-resize";
+
+      const handleMove = (ev: PointerEvent) => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const next = ((ev.clientX - rect.left) / rect.width) * 100;
+        setLeftWidth(Math.min(72, Math.max(30, next)));
+      };
+
+      const handleUp = () => {
+        el.removeEventListener("pointermove", handleMove);
+        el.removeEventListener("pointerup", handleUp);
+        el.removeEventListener("lostpointercapture", handleUp);
+        setIsResizing(false);
+        document.body.style.userSelect = "";
+        document.body.style.cursor = "";
+      };
+
+      el.addEventListener("pointermove", handleMove);
+      el.addEventListener("pointerup", handleUp);
+      el.addEventListener("lostpointercapture", handleUp);
+    },
+    [isCompact],
+  );
+
   useEffect(() => {
-    if (!isResizing || isCompact) return;
-
-    const handleMove = (event: PointerEvent) => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const next = ((event.clientX - rect.left) / rect.width) * 100;
-      const clamped = Math.min(64, Math.max(38, next));
-      setLeftWidth(clamped);
+    const handleNewChat = () => {
+      const nextTabSessionId = getOrCreateTabSessionId();
+      setTabSessionId(nextTabSessionId);
+      setTabSession(nextTabSessionId);
+      setActiveConversationId(null);
+      clearStoredActiveConversationId();
+      setMessages([]);
+      setProfile(EMPTY_PROFILE);
+      setInput("");
+      // Bootstrap will be triggered by effect if needed, or we just stay empty
     };
 
-    const handleUp = () => setIsResizing(false);
-
-    window.addEventListener("pointermove", handleMove);
-    window.addEventListener("pointerup", handleUp);
-
-    return () => {
-      window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("pointerup", handleUp);
-    };
-  }, [isResizing, isCompact]);
+    window.addEventListener("memoraiz:new-chat", handleNewChat);
+    return () => window.removeEventListener("memoraiz:new-chat", handleNewChat);
+  }, []);
 
   useEffect(() => {
     if (!isTyping || !activeConversationId) {
@@ -316,19 +347,18 @@ export default function ChatClient() {
     setIsTyping(false);
   }, []);
 
-  const welcomeMessage = useMemo<ChatMessage | null>(() => {
-    if (!activeConversationId) return null;
+  const welcomeMessage = useMemo<ChatMessage>(() => {
     return {
-      id: `welcome-${activeConversationId}`,
+      id: "welcome-message",
       role: "assistant",
       content: WELCOME_MESSAGE,
       createdAt: new Date().toISOString(),
     };
-  }, [activeConversationId]);
+  }, []);
 
   const visibleMessages = useMemo(() => {
     if (messages.length > 0) return messages;
-    return welcomeMessage ? [welcomeMessage] : [];
+    return [welcomeMessage];
   }, [messages, welcomeMessage]);
 
   const handleCopy = useCallback(async (messageId: string, text: string) => {
@@ -372,6 +402,7 @@ export default function ChatClient() {
     if (stableUserId && tabSessionId && activeConversationId && !isTyping) {
       void regenerateFromMessage(editingMessageId, next);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     activeConversationId,
     cancelEditingMessage,
@@ -385,6 +416,7 @@ export default function ChatClient() {
   const toggleFeedback = useCallback((messageId: string, value: "up" | "down") => {
     setFeedbackById((current) => {
       if (current[messageId] === value) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [messageId]: _, ...rest } = current;
         return rest;
       }
@@ -444,6 +476,7 @@ export default function ChatClient() {
       setInput("");
       void handleSend(next);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTyping, queuedInput, activeConversationId, stableUserId, tabSessionId]);
 
   const applyProfileUpdate = (field: keyof CompanyProfile, value: string) => {
@@ -649,370 +682,425 @@ export default function ChatClient() {
   const gridColumns = isCompact ? "1fr" : `${leftWidth}% 12px ${100 - leftWidth}%`;
 
   return (
-    <div
-      ref={containerRef}
-      data-resizing={isResizing ? "true" : "false"}
-      className="app-shell grid h-auto flex-1 gap-0 overflow-hidden transition-[grid-template-columns] duration-150 lg:h-full"
-      style={{ gridTemplateColumns: gridColumns }}
-    >
-      <section className="panel flex h-auto flex-1 flex-col border-b border-white/10 min-h-[420px] lg:h-full lg:min-h-0 lg:border-b-0 lg:border-r">
-        <div className="chat-column mx-auto w-full px-6 py-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="section-title heading-font text-lg font-semibold text-slate-100">
-                Onboarding Chat
-              </h2>
-              <p className="section-subtitle text-sm text-slate-400">
-                The assistant interviews your team and fills the canvas.
-              </p>
-            </div>
-            <div className="badge-ready rounded-full px-3 py-1 text-xs font-medium">
-              {isTyping ? "Assistant typing..." : "Ready"}
+    <div className="flex flex-col flex-1 h-full min-h-0">
+      {isCompact && (
+        <div className="mobile-tab-bar">
+          <button
+            className={`mobile-tab${activeTab === "chat" ? " mobile-tab-active" : ""}`}
+            onClick={() => setActiveTab("chat")}
+          >
+            Chat
+          </button>
+          <button
+            className={`mobile-tab${activeTab === "canvas" ? " mobile-tab-active" : ""}`}
+            onClick={() => setActiveTab("canvas")}
+          >
+            Canvas
+          </button>
+        </div>
+      )}
+      <div
+        ref={containerRef}
+        data-resizing={isResizing ? "true" : "false"}
+        className="app-shell grid flex-1 min-h-0 gap-0 transition-[grid-template-columns] duration-150"
+        style={{ gridTemplateColumns: gridColumns, gridTemplateRows: '1fr' }}
+      >
+        <section className={`panel flex flex-col min-h-0 border-b border-white/10 lg:border-b-0 lg:border-r${isCompact && activeTab !== "chat" ? " hidden" : ""}`}>
+          <div className="chat-column mx-auto w-full px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="section-title heading-font text-lg font-semibold text-slate-100">
+                  Onboarding Chat
+                </h2>
+                <p className="section-subtitle text-sm text-slate-400">
+                  The assistant interviews your team and fills the canvas.
+                </p>
+              </div>
+              <div className="badge-ready rounded-full px-3 py-1 text-xs font-medium">
+                {isTyping ? "Assistant typing..." : "Ready"}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto blend-scroll no-scrollbar">
-          <div className="chat-column mx-auto w-full space-y-4 px-6 pb-6">
-            {messages.length === 0 && (
-              <div className="panel-card p-5">
-                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                  Quick prompts
+          <div className="flex-1 min-h-0 overflow-y-auto blend-scroll chat-scroll-smooth">
+            <div className="chat-column mx-auto w-full space-y-4 px-6 pb-6">
+              {messages.length === 0 && (
+                <div className="panel-card p-5">
+                  <div className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                    Quick prompts
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {PROMPT_CHIPS.map((label) => (
+                      <button
+                        key={label}
+                        onClick={() => setInput(label)}
+                        className="chip rounded-full px-4 py-2 text-xs font-medium text-slate-200"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  {PROMPT_CHIPS.map((label) => (
-                    <button
-                      key={label}
-                      onClick={() => setInput(label)}
-                      className="chip rounded-full px-4 py-2 text-xs font-medium text-slate-200"
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
 
-            {visibleMessages.map((message) => (
-              <div
-                key={message.id}
-                className={`message-row flex ${message.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-              >
+              {visibleMessages.map((message) => (
                 <div
-                  className={`message-stack flex max-w-[90%] flex-col gap-2 lg:max-w-[85%] ${message.role === "user" ? "items-end" : "items-start"
+                  key={message.id}
+                  className={`message-row flex ${message.role === "user" ? "justify-end" : "justify-start"
                     }`}
                 >
                   <div
-                    className={`message-bubble group relative w-full rounded-2xl border px-4 py-3 text-sm leading-relaxed ${message.role === "user"
-                      ? "message-user text-white"
-                      : "message-assistant text-slate-200"
+                    className={`message-stack flex max-w-[90%] flex-col gap-2 lg:max-w-[85%] ${message.role === "user" ? "items-end" : "items-start"
                       }`}
                   >
-                    {editingMessageId === message.id ? (
-                      <div className="space-y-2">
-                        <textarea
-                          value={editingDraft}
-                          onChange={(event) => setEditingDraft(event.target.value)}
-                          className="message-editor w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400/50"
-                          rows={3}
-                        />
-                        <div className="flex items-center gap-2 text-xs">
-                          <button
-                            onClick={saveEditedMessage}
-                            className="theme-btn-icon rounded-full px-3 py-1"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={cancelEditingMessage}
-                            className="theme-btn-icon rounded-full px-3 py-1 opacity-60"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <p>{message.content}</p>
-                        <div className="message-meta mt-2 flex items-center gap-2 text-xs text-slate-500">
-                          <span>{formatTimestamp(message.createdAt)}</span>
-                          {message.edited && message.role === "user" && (
-                            <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400">
-                              Edited
-                            </span>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {message.role !== "system" && !message.id.startsWith("welcome-") && (
                     <div
-                      className={`message-actions-inline ${message.role === "user" ? "justify-end" : "justify-start"
+                      className={`message-bubble group relative w-full rounded-2xl border px-4 py-3 text-sm leading-relaxed ${message.role === "user"
+                        ? "message-user text-white"
+                        : "message-assistant text-slate-200"
                         }`}
                     >
-                      {message.role === "user" ? (
-                        <>
-                          <button
-                            onClick={() => startEditingMessage(message)}
-                            className="theme-btn-icon h-8 w-8 p-1.5"
-                            disabled={isTyping}
-                            aria-label="Edit message"
-                            title="Edit"
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M12 20h9" />
-                              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleCopy(message.id, message.content)}
-                            className="theme-btn-icon h-8 w-8 p-1.5"
-                            aria-label="Copy message"
-                            title={copiedMessageId === message.id ? "Copied" : "Copy"}
-                          >
-                            {copiedMessageId === message.id ? (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
-                            ) : (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                              </svg>
-                            )}
-                          </button>
-                        </>
+                      {editingMessageId === message.id ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={editingDraft}
+                            onChange={(event) => {
+                              setEditingDraft(event.target.value);
+                              const el = event.target;
+                              el.style.height = 'auto';
+                              el.style.height = el.scrollHeight + 'px';
+                            }}
+                            ref={(el) => {
+                              if (el) {
+                                el.style.height = 'auto';
+                                el.style.height = el.scrollHeight + 'px';
+                              }
+                            }}
+                            className="message-editor w-full rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400/50"
+                            style={{ resize: 'none', overflow: 'hidden' }}
+                          />
+                          <div className="flex items-center gap-2 text-xs">
+                            <button
+                              onClick={saveEditedMessage}
+                              className="theme-btn-icon rounded-full px-3 py-1"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelEditingMessage}
+                              className="theme-btn-icon rounded-full px-3 py-1 opacity-60"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
                       ) : (
                         <>
-                          <button
-                            onClick={() => handleRegenerate(message.id)}
-                            className="theme-btn-icon h-8 w-8 p-1.5"
-                            disabled={isTyping}
-                            aria-label="Regenerate response"
-                            title="Regenerate"
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M21 12a9 9 0 1 1-6.21-8.85" />
-                              <path d="M21 3v6h-6" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleCopy(message.id, message.content)}
-                            className="theme-btn-icon h-8 w-8 p-1.5"
-                            aria-label="Copy message"
-                            title={copiedMessageId === message.id ? "Copied" : "Copy"}
-                          >
-                            {copiedMessageId === message.id ? (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
-                            ) : (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                              </svg>
+                          <div className="prose prose-invert prose-sm max-w-none text-slate-200 leading-relaxed">
+                            {message.content.split('\n').map((line, i) => {
+                              // Simple bold parser
+                              const parts = line.split(/(\*\*.*?\*\*)/g);
+                              return (
+                                <p key={i} className="mb-2 last:mb-0">
+                                  {parts.map((part, j) => {
+                                    if (part.startsWith('**') && part.endsWith('**')) {
+                                      return <strong key={j} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
+                                    }
+                                    return part;
+                                  })}
+                                </p>
+                              );
+                            })}
+                          </div>
+                          <div className="message-meta mt-2 flex items-center gap-2 text-xs text-slate-500">
+                            <span>{formatTimestamp(message.createdAt)}</span>
+                            {message.edited && message.role === "user" && (
+                              <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                                Edited
+                              </span>
                             )}
-                          </button>
-                          <button
-                            onClick={() => toggleFeedback(message.id, "up")}
-                            className={`theme-btn-icon h-8 w-8 p-1.5 ${feedbackById[message.id] === "up" ? "is-active text-emerald-400" : ""
-                              }`}
-                            aria-label="Like message"
-                            title="Like"
-                          >
-                            {feedbackById[message.id] === "up" ? (
-                              <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M7 10v12" />
-                                <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
-                              </svg>
-                            ) : (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M7 10v12" />
-                                <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
-                              </svg>
-                            )}
-                          </button>
-                          <button
-                            onClick={() => toggleFeedback(message.id, "down")}
-                            className={`theme-btn-icon h-8 w-8 p-1.5 ${feedbackById[message.id] === "down" ? "is-active text-rose-400" : ""
-                              }`}
-                            aria-label="Dislike message"
-                            title="Dislike"
-                          >
-                            {feedbackById[message.id] === "down" ? (
-                              <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M17 14V2" />
-                                <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z" />
-                              </svg>
-                            ) : (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M17 14V2" />
-                                <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z" />
-                              </svg>
-                            )}
-                          </button>
+                          </div>
                         </>
                       )}
                     </div>
-                  )}
-                </div>
-              </div>
-            ))}
 
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="panel-soft px-4 py-3 text-sm text-slate-400">
-                  Typing...
+                    {message.role !== "system" && !message.id.startsWith("welcome-") && (
+                      <div
+                        className={`message-actions-inline ${message.role === "user" ? "justify-end" : "justify-start"
+                          }`}
+                      >
+                        {message.role === "user" ? (
+                          <>
+                            <button
+                              onClick={() => startEditingMessage(message)}
+                              className="theme-btn-icon h-8 w-8 p-1.5"
+                              disabled={isTyping}
+                              aria-label="Edit message"
+                              title="Edit"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleCopy(message.id, message.content)}
+                              className="theme-btn-icon h-8 w-8 p-1.5"
+                              aria-label="Copy message"
+                              title={copiedMessageId === message.id ? "Copied" : "Copy"}
+                            >
+                              {copiedMessageId === message.id ? (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              ) : (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                </svg>
+                              )}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleRegenerate(message.id)}
+                              className="theme-btn-icon h-8 w-8 p-1.5"
+                              disabled={isTyping}
+                              aria-label="Regenerate response"
+                              title="Regenerate"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 12a9 9 0 1 1-6.21-8.85" />
+                                <path d="M21 3v6h-6" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleCopy(message.id, message.content)}
+                              className="theme-btn-icon h-8 w-8 p-1.5"
+                              aria-label="Copy message"
+                              title={copiedMessageId === message.id ? "Copied" : "Copy"}
+                            >
+                              {copiedMessageId === message.id ? (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              ) : (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => toggleFeedback(message.id, "up")}
+                              className={`theme-btn-icon h-8 w-8 p-1.5 ${feedbackById[message.id] === "up" ? "is-active text-emerald-400" : ""
+                                }`}
+                              aria-label="Like message"
+                              title="Like"
+                            >
+                              {feedbackById[message.id] === "up" ? (
+                                <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M7 10v12" />
+                                  <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
+                                </svg>
+                              ) : (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M7 10v12" />
+                                  <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => toggleFeedback(message.id, "down")}
+                              className={`theme-btn-icon h-8 w-8 p-1.5 ${feedbackById[message.id] === "down" ? "is-active text-rose-400" : ""
+                                }`}
+                              aria-label="Dislike message"
+                              title="Dislike"
+                            >
+                              {feedbackById[message.id] === "down" ? (
+                                <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M17 14V2" />
+                                  <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z" />
+                                </svg>
+                              ) : (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M17 14V2" />
+                                  <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z" />
+                                </svg>
+                              )}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-            <div ref={scrollRef} />
-          </div>
-        </div>
+              ))}
 
-        <div className="border-t border-white/10">
-          <div className="chat-column mx-auto w-full px-6 py-5">
-            <div className="input-shell flex items-center gap-3 rounded-full px-4 py-3">
-              <input
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    void handleSend();
-                  }
-                }}
-                placeholder="Share details about your company..."
-                className="flex-1 bg-transparent text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none"
-              />
-              <button
-                onClick={isTyping ? stopStreaming : () => void handleSend()}
-                disabled={isTyping ? false : !canSend}
-                className="theme-btn-icon flex h-9 w-9 items-center justify-center transition disabled:opacity-40"
-                aria-label={isTyping ? "Stop generating" : "Send message"}
-              >
-                {isTyping ? (
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
-                    <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none">
-                    <path
-                      d="M12 5l7 7-7 7"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M5 12h13"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
-              </button>
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="panel-soft px-4 py-3 text-sm text-slate-400">
+                    Typing...
+                  </div>
+                </div>
+              )}
+              <div ref={scrollRef} />
             </div>
           </div>
-        </div>
-      </section>
 
-      <div
-        onPointerDown={isCompact ? undefined : () => setIsResizing(true)}
-        className="divider-rail hidden cursor-col-resize lg:block"
-      />
-
-      <section className="panel flex h-auto flex-1 flex-col min-h-[420px] lg:h-full lg:min-h-0 border-l border-white/5">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-          <div>
-            <h2 className="section-title heading-font text-lg font-semibold text-slate-100">
-              Company Canvas
-            </h2>
-            <p className="section-subtitle text-sm text-slate-400">
-              Review or refine the profile as the agent learns.
-            </p>
+          <div className="border-t border-white/10">
+            <div className="chat-column mx-auto w-full px-6 py-4">
+              <div className="input-shell flex items-center gap-3 rounded-full px-4 py-3">
+                <input
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void handleSend();
+                    }
+                  }}
+                  placeholder="Share details about your company..."
+                  className="flex-1 bg-transparent text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none"
+                />
+                <button
+                  onClick={isTyping ? stopStreaming : () => void handleSend()}
+                  disabled={isTyping ? false : !canSend}
+                  className="theme-btn-icon flex h-9 w-9 items-center justify-center transition disabled:opacity-40"
+                  aria-label={isTyping ? "Stop generating" : "Send message"}
+                >
+                  {isTyping ? (
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+                      <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className={`h-4 w-4 ${input.trim() ? "text-white" : "text-slate-500"}`} fill="none">
+                      <path
+                        d="M12 5l7 7-7 7"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M5 12h13"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="badge-editable rounded-full px-3 py-1 text-xs font-medium">
-            {canEditForm ? "Editable" : "Locked"}
-          </div>
-        </div>
+        </section>
 
-        <form
-          className="mt-0 flex-1 min-h-0 space-y-2 overflow-y-auto pl-4 pr-6 canvas-scroll"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (!activeConversationId || !stableUserId) return;
-            setIsSubmitting(true);
-            try {
-              await fetch("/api/profile", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  conversationId: activeConversationId,
-                  stableUserId,
-                  tabSessionId,
-                  profile,
-                }),
-              });
-              setShowSuccess(true);
-              confetti({
-                particleCount: 150,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#34d399', '#38bdf8', '#ffffff']
-              });
-              setTimeout(() => setShowSuccess(false), 3000);
-            } catch {
-              // error handling could go here
-            } finally {
-              setIsSubmitting(false);
-            }
-          }}
-        >
-          {([
-            { key: "name", label: "Company Name" },
-            { key: "industry", label: "Industry" },
-            { key: "description", label: "Description" },
-            { key: "aiMaturityLevel", label: "AI Maturity" },
-            { key: "aiUsage", label: "AI Usage" },
-            { key: "goals", label: "Goals" },
-          ] as const).map(({ key, label }) => (
-            <label
-              key={key}
-              className="label-caps block text-[13px] font-medium tracking-wide text-slate-600 mb-1 formal-canvas-label"
-              style={{ fontFamily: 'Segoe UI, Arial, Helvetica, sans-serif' }}
-            >
-              {label}
-              <textarea
-                value={profile[key]}
-                onChange={(event) => applyProfileUpdate(key, event.target.value)}
-                className="formal-canvas-textarea mt-1 w-full"
-                placeholder={`Add ${label.toLowerCase()}...`}
-                disabled={!canEditForm}
-                style={{ fontFamily: 'Segoe UI, Arial, Helvetica, sans-serif', fontSize: '15px', lineHeight: '1.5' }}
-              />
-            </label>
-          ))}
-          <div className="pt-2 flex flex-col items-end">
-            <button
-              type="submit"
-              className="formal-canvas-submit disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!canEditForm || !isFormValid || isSubmitting}
-            >
-              {showSuccess ? "Request Submitted" : isSubmitting ? "Saving..." : "Submit"}
-            </button>
-            {showSuccess && (
-              <p className="mt-2 text-xs text-emerald-400">
-                Profile saved successfully!
+        <div
+          ref={dividerRef}
+          onPointerDown={handleDividerPointerDown}
+          className="divider-rail hidden cursor-col-resize lg:block"
+        />
+
+        <section className={`panel flex flex-col min-h-0 border-l border-white/10${isCompact && activeTab !== "canvas" ? " hidden" : ""}`}>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+            <div>
+              <h2 className="section-title heading-font text-lg font-semibold text-slate-100">
+                Company Canvas
+              </h2>
+              <p className="section-subtitle text-sm text-slate-400">
+                Review or refine the profile as the agent learns.
               </p>
-            )}
+            </div>
+            <div className="badge-editable rounded-full px-3 py-1 text-xs font-medium">
+              {canEditForm ? "Editable" : "Locked"}
+            </div>
           </div>
-        </form>
-      </section>
-    </div >
+
+          <form
+            className="mt-0 flex-1 min-h-0 space-y-2 pl-4 pr-6 overflow-y-auto canvas-scroll"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!activeConversationId || !stableUserId) return;
+              setIsSubmitting(true);
+              try {
+                await fetch("/api/profile", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    conversationId: activeConversationId,
+                    stableUserId,
+                    tabSessionId,
+                    profile,
+                  }),
+                });
+                setShowSuccess(true);
+                confetti({
+                  particleCount: 150,
+                  spread: 70,
+                  origin: { y: 0.6 },
+                  colors: ['#34d399', '#38bdf8', '#ffffff']
+                });
+                setTimeout(() => setShowSuccess(false), 3000);
+              } catch {
+                // error handling could go here
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}
+          >
+            {([
+              { key: "name", label: "Company Name" },
+              { key: "industry", label: "Industry" },
+              { key: "description", label: "Description" },
+              { key: "aiMaturityLevel", label: "AI Maturity" },
+              { key: "aiUsage", label: "AI Usage" },
+              { key: "goals", label: "Goals" },
+            ] as const).map(({ key, label }) => (
+              <label
+                key={key}
+                className="block text-[13px] font-medium tracking-wide text-slate-600 mb-1 formal-canvas-label"
+              >
+                {label}
+                <textarea
+                  value={profile[key]}
+                  onChange={(event) => {
+                    applyProfileUpdate(key, event.target.value);
+                    const el = event.target;
+                    el.style.height = 'auto';
+                    el.style.height = el.scrollHeight + 'px';
+                  }}
+                  ref={(el) => {
+                    if (el) {
+                      el.style.height = 'auto';
+                      el.style.height = el.scrollHeight + 'px';
+                    }
+                  }}
+                  className="formal-canvas-textarea mt-1 w-full"
+                  placeholder={`Add ${label.toLowerCase()}...`}
+                  disabled={!canEditForm}
+                  style={{ overflow: 'hidden' }}
+                />
+              </label>
+            ))}
+            <div className="pt-2 flex flex-col items-end">
+              <button
+                type="submit"
+                className="formal-canvas-submit disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!canEditForm || !isFormValid || isSubmitting}
+              >
+                {showSuccess ? "Request Submitted" : isSubmitting ? "Saving..." : "Submit"}
+              </button>
+              {showSuccess && (
+                <p className="mt-2 text-xs text-emerald-400">
+                  Profile saved successfully!
+                </p>
+              )}
+            </div>
+          </form>
+        </section>
+      </div>
+    </div>
   );
 }

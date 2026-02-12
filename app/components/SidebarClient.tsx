@@ -151,24 +151,20 @@ export default function SidebarClient() {
     });
   }, [conversations, prefetchById, stableUserId]);
 
-  async function handleNewConversation() {
-    if (!stableUserId) return;
-    const response = await fetch("/api/conversations/new", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stableUserId, tabSessionId: tabSessionId ?? "" }),
-    });
-    if (!response.ok) return;
-    const data = (await response.json()) as {
-      conversation: ConversationMeta;
-      tabSessionId: string;
-    };
-    setTabSessionId(data.tabSessionId);
-    setTabSession(data.tabSessionId);
-    setStoredActiveConversationId(data.conversation.id);
-    setActiveConversationId(data.conversation.id);
-    router.replace(`/?c=${data.conversation.id}`);
-    window.dispatchEvent(new CustomEvent("memoraiz:conversations-updated"));
+  function handleNewConversation() {
+    // Client-side reset for instant "New Chat"
+    const nextTabSessionId = crypto.randomUUID();
+    setTabSessionId(nextTabSessionId);
+    setTabSession(nextTabSessionId);
+
+    clearStoredActiveConversationId();
+    setActiveConversationId(null);
+
+    // Clear URL params to reset ChatClient to empty state
+    router.push("/");
+
+    // Notify ChatClient to reset its state via custom event
+    window.dispatchEvent(new CustomEvent("memoraiz:new-chat"));
   }
 
   function handleSelectConversation(conversation: ConversationMeta) {
@@ -267,11 +263,10 @@ export default function SidebarClient() {
               {group.items.map((conversation) => (
                 <div
                   key={conversation.id}
-                  className={`conversation-item group flex items-center justify-between rounded-xl px-3 py-2 transition ${
-                    activeConversationId === conversation.id
-                      ? "conversation-item-active text-white"
-                      : "text-slate-300"
-                  }`}
+                  className={`conversation-item group flex items-center justify-between rounded-xl px-3 py-2 transition ${activeConversationId === conversation.id
+                    ? "conversation-item-active text-white"
+                    : "text-slate-300"
+                    }`}
                 >
                   {editingConversationId === conversation.id ? (
                     <input

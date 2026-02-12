@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${plusJakartaSans.variable} ${spaceGrotesk.variable} antialiased`}
+        className={`${plusJakartaSans.variable} ${spaceGrotesk.variable} antialiased flex flex-col min-h-screen lg:h-screen lg:overflow-hidden`}
         suppressHydrationWarning
       >
         {process.env.NEXT_PUBLIC_VERCEL_ENV === "production" && (
@@ -43,7 +43,7 @@ export default function RootLayout({
           </>
         )}
         <div className="pointer-events-none absolute inset-0 app-grid opacity-60" />
-        <div className="pointer-events-none absolute inset-0">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="glow-orb absolute -top-32 left-1/4 h-[420px] w-[420px] rounded-full bg-emerald-400/10 blur-[80px]" />
           <div className="glow-orb absolute -bottom-40 right-1/4 h-[380px] w-[380px] rounded-full bg-sky-400/10 blur-[80px]" />
         </div>

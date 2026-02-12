@@ -2,7 +2,7 @@
 .formal-canvas-label {
   font-family: 'Segoe UI', Arial, Helvetica, sans-serif !important;
   font-weight: 500;
-  color: #334155;
+  color: var(--muted);
   letter-spacing: normal !important;
   margin-bottom: 0.25rem;
 }
@@ -16,10 +16,10 @@
   border-radius: 6px !important;
   padding: 6px 10px !important;
   background: var(--surface-2) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid var(--edge) !important;
   box-shadow: none !important;
   outline: none !important;
-  resize: vertical;
+  resize: none;
   transition: border-color 0.2s;
 }
 
@@ -89,7 +89,7 @@ body {
 
 @media (min-width: 1024px) {
   body {
-    overflow: hidden;
+    overflow-y: auto;
   }
 }
 
@@ -180,7 +180,7 @@ body {
 }
 
 .app-shell {
-  border: 1px solid var(--edge);
+  border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 0;
   background: linear-gradient(180deg, rgba(18, 25, 36, 0.9) 0%, rgba(12, 16, 22, 0.95) 100%);
   box-shadow: 0 40px 120px -80px rgba(0, 0, 0, 0.95);
@@ -188,6 +188,7 @@ body {
 }
 
 :root[data-theme="light"] .app-shell {
+  border-color: rgba(15, 23, 42, 0.08);
   background: linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%);
   box-shadow: 0 50px 120px -90px rgba(15, 23, 42, 0.10);
 }
@@ -202,7 +203,7 @@ body {
 
 .panel-card {
   border: 1px solid var(--edge);
-  border-radius: 0;
+  border-radius: 20px;
   background: linear-gradient(180deg, rgba(21, 30, 43, 0.9) 0%, rgba(17, 24, 35, 0.96) 100%);
   box-shadow: 0 24px 70px -50px rgba(0, 0, 0, 0.9);
 }
@@ -349,6 +350,17 @@ body {
   border: 1px solid var(--edge);
   background: rgba(18, 25, 36, 0.95);
   box-shadow: 0 20px 40px -30px rgba(0, 0, 0, 0.8);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.input-shell:focus-within {
+  border-color: rgba(56, 189, 248, 0.3);
+  box-shadow: 0 20px 40px -30px rgba(0, 0, 0, 0.8), 0 0 20px -8px rgba(56, 189, 248, 0.15);
+}
+
+:root[data-theme="light"] .input-shell:focus-within {
+  border-color: rgba(14, 165, 233, 0.3);
+  box-shadow: 0 20px 40px -32px rgba(15, 23, 42, 0.18), 0 0 20px -8px rgba(14, 165, 233, 0.1);
 }
 
 .message-editor {
@@ -565,11 +577,13 @@ body {
 
 .conversation-item {
   border: 1px solid transparent;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
 .conversation-item:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.08);
+  transform: translateX(2px);
 }
 
 .conversation-item-active {
@@ -609,14 +623,35 @@ body {
   transition: background 200ms ease, box-shadow 200ms ease;
   position: relative;
   width: 4px;
+  overflow: visible;
+  touch-action: none;
 }
 
 .divider-rail::before {
   content: "";
   position: absolute;
   inset: 0;
-  left: -10px;
-  right: -10px;
+  left: -14px;
+  right: -14px;
+  z-index: 10;
+}
+
+.divider-rail::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.3);
+  transition: background 200ms ease, height 200ms ease;
+}
+
+.divider-rail:hover::after {
+  background: rgba(56, 189, 248, 0.5);
+  height: 48px;
 }
 
 .divider-rail:hover {
@@ -631,6 +666,38 @@ body {
 
 :root[data-theme="light"] .divider-rail {
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.15), rgba(15, 23, 42, 0.04));
+}
+
+/* ── Mobile tab switcher ─────────────────────────── */
+.mobile-tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--edge);
+  background: var(--surface);
+}
+
+.mobile-tab {
+  flex: 1;
+  padding: 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+}
+
+.mobile-tab:hover {
+  color: var(--foreground);
+}
+
+.mobile-tab-active {
+  color: var(--accent-2);
+  border-bottom-color: var(--accent-2);
 }
 
 @keyframes fadeUp {
@@ -648,6 +715,37 @@ body {
 .fade-up {
   will-change: transform, opacity;
   animation: fadeUp 450ms ease-out both;
+}
+
+/* Message slide-in animation */
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-row {
+  animation: messageIn 300ms ease-out both;
+}
+
+/* Subtle hover lift on message bubbles */
+.message-bubble {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.message-bubble:hover {
+  transform: translateY(-1px);
+}
+
+/* Smooth scrolling for chat */
+.chat-scroll-smooth {
+  scroll-behavior: smooth;
 }
 
 .blend-scroll {

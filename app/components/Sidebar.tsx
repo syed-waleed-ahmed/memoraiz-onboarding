@@ -5,7 +5,7 @@ import MemoraizLogo from "@/app/components/MemoraizLogo";
 
 export default function Sidebar() {
   return (
-    <aside className="sidebar-shell flex w-full flex-col lg:w-72 lg:shrink-0">
+    <aside className="sidebar-shell flex w-full flex-col lg:w-72 lg:shrink-0 lg:h-full lg:overflow-y-auto canvas-scroll">
       <div className="px-6 pt-6">
         <div className="flex flex-col gap-3">
           <MemoraizLogo className="h-9 w-auto" />

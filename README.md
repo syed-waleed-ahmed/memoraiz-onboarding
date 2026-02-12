@@ -1,62 +1,115 @@
 # Memoraiz Onboarding Assistant
 
-Split-screen onboarding experience with a live company profile canvas and a Mastra-powered interview agent.
+Split-screen onboarding experience with a live company-profile canvas and an AI-powered interview agent.
 
-## Highlights
+## Features
 
-- Per-tab chat sessions with persistent conversation history.
-- Sidebar conversation hub with rename/delete flows.
-- Real-time company canvas synced to the chat.
-- Light/dark theme toggle with theme-aware styling.
+- **Conversational onboarding** — AI assistant interviews users and auto-fills the company canvas.
+- **Per-tab sessions** — each browser tab gets its own chat, with persistent conversation history.
+- **Sidebar conversation hub** — rename, delete, and switch between past conversations.
+- **Light / dark theme** — toggle with theme-aware styling throughout.
+- **RAG-powered answers** — retrieval-augmented generation using embedded Memoraiz docs.
+- **Real-time canvas sync** — profile fields update as the chat progresses.
+- **Smooth, polished UI** — micro-animations, blended scrollbars, input focus glow, and responsive layout.
 
 ## Requirements
 
 - Node.js 20+
-- pnpm 10+
+- npm 10+ (or pnpm / yarn)
 
-## Setup
+## Quick Start
 
-1. Copy environment variables: duplicate `.env.example` to `.env.local`, then fill the values listed in the next section.
+```bash
+# 1. Install dependencies
+npm install
 
-1. Install dependencies: `pnpm install`.
+# 2. Create your environment file
+#    Copy .env.example to .env.local and fill in the required values (see below).
 
-1. Run the dev server: `pnpm dev`.
+# 3. Apply the database schema (requires POSTGRES_URL)
+npx tsx scripts/apply-schema.ts
 
-1. (Optional) Ingest docs into pgvector: `pnpm ingest:docs`.
+# 4. Run the dev server
+npm run dev
 
-1. Apply database schema (required for chat history + vector search): `pnpm tsx scripts/apply-schema.ts`.
+# 5. (Optional) Ingest docs into pgvector for RAG
+npm run ingest:docs
+```
 
-1. Run tests: `pnpm test`.
+## Environment Variables
 
-## Environment variables
+Set these in `.env.local`:
 
-Set these in `.env.local` (values depend on your provider and deployment target):
+| Variable | Required | Description |
+|---|---|---|
+| `POSTGRES_URL` | Yes | Postgres connection string (conversations, profiles, vectors) |
+| `OPENAI_API_KEY` | Yes* | OpenAI API key |
+| `GEMINI_API_KEY` | Alt | Google Gemini API key |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Alt | Gemini fallback key |
+| `MEMORAIZ_MODEL` | No | Override model, e.g. `google/gemini-1.5-flash-latest` |
 
-- `POSTGRES_URL` (required for conversation history + canvas storage)
-- `OPENAI_API_KEY` (OpenAI support)
-- `GEMINI_API_KEY` (Gemini support)
-- `GOOGLE_GENERATIVE_AI_API_KEY` (Gemini fallback if needed)
-- `MEMORAIZ_MODEL` (optional; example: `google/gemini-1.5-flash-latest`)
+*At least one AI provider key is required.
 
-## Database setup
+## Project Structure
 
-- Schema lives in `lib/db/schema.sql`.
-- Apply locally with `pnpm tsx scripts/apply-schema.ts`.
-- Uses `pgcrypto` for UUIDs and includes conversations, messages, profiles, and documents.
+```
+app/
+├── api/              # Next.js API routes
+│   ├── agent/        # Agent proxy endpoint
+│   ├── bootstrap/    # Session bootstrapping
+│   ├── chat/         # Chat streaming endpoint
+│   ├── conversations/# CRUD for conversations
+│   ├── health/       # Health check
+│   ├── messages/     # Message operations
+│   └── profile/      # Company profile endpoint
+├── components/       # React components
+│   ├── ChatClient.tsx      # Main chat interface
+│   ├── ChatShell.tsx       # Suspense wrapper
+│   ├── MemoraizLogo.tsx    # Logo component
+│   ├── Sidebar.tsx         # Sidebar layout
+│   ├── SidebarClient.tsx   # Sidebar logic (conversations, new chat)
+│   └── ThemeToggle.tsx     # Theme switcher
+├── globals.css       # Design system & theme tokens
+├── layout.tsx        # Root layout
+└── page.tsx          # Home page
 
-## Notes
+lib/
+├── db/               # Database helpers (conversationRepo, messageRepo, etc.)
+├── session.ts        # Client-side session management
+├── store/            # In-memory profile store
+└── ui/               # UI utilities (conversation cache)
 
-- The onboarding chat API lives in `app/api/chat/route.ts` (agent proxy in `app/api/agent/route.ts`).
-- The split-screen UI shell is in `app/page.tsx`.
-- Profile endpoint is `app/api/profile/route.ts`.
-- Postgres schema is in `lib/db/schema.sql`.
-- Postgres helper is `scripts/apply-schema.ts` (loads `.env.local`).
-- Local doc fallback uses markdown and PDF files in the project root (or the two included Memoraiz docs).
-- CI runs lint, tests, and build via GitHub Actions. Vercel deploy uses repository secrets.
+scripts/
+├── apply-schema.ts   # Apply Postgres schema
+└── ingest-docs.ts    # Ingest documents for RAG
+```
 
 ## Scripts
 
-- `pnpm dev` - run the dev server.
-- `pnpm build` - production build.
-- `pnpm test` - test runner.
-- `pnpm ingest:docs` - optional pgvector document ingestion.
+| Command | Description |
+|---|---|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run tests (Vitest) |
+| `npm run ingest:docs` | Ingest documents into pgvector |
+
+## Database
+
+Schema lives in `lib/db/schema.sql`. Apply it with:
+
+```bash
+npx tsx scripts/apply-schema.ts
+```
+
+Uses `pgcrypto` for UUIDs. Tables: `conversations`, `messages`, `profiles`, `documents`.
+
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS 4 + custom design tokens
+- **AI**: OpenAI / Google Gemini via Mastra
+- **Database**: PostgreSQL + pgvector
+- **Testing**: Vitest + Testing Library
+- **Deployment**: Vercel
