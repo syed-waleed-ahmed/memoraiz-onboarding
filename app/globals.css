@@ -789,9 +789,34 @@ body {
   width: 8px;
 }
 
-.canvas-scroll:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.25);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+
+/* ── Typing Cursor ─────────────────────────── */
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background-color: var(--accent-2);
+  margin-left: 2px;
+  vertical-align: middle;
+  animation: soft-blink 0.8s ease-in-out infinite;
+}
+
+@keyframes soft-blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.1;
+  }
+}
+
+.message-assistant .typing-cursor {
+  background-color: var(--accent-2);
+}
+
+:root[data-theme="light"] .typing-cursor {
+  background-color: var(--accent-2);
 }

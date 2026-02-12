@@ -147,7 +147,17 @@ export async function streamChat({
     const encoder = new TextEncoder();
     return new ReadableStream({
       async start(controller) {
-        controller.enqueue(encoder.encode(heroAnswer));
+        // Split by whitespace but keep the spaces in the output by using a regex with capture group
+        const words = heroAnswer.split(/(\s+)/);
+
+        for (const word of words) {
+          if (word) {
+            controller.enqueue(encoder.encode(word));
+            // Simulate natural typing speed (~30ms per word/space)
+            await new Promise((resolve) => setTimeout(resolve, 30));
+          }
+        }
+
         controller.close();
         // Persist the message
         await appendMessage(stableUserId, conversationId, "assistant", heroAnswer).catch(() => null);

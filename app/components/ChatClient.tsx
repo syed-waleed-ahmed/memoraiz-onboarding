@@ -807,6 +807,10 @@ export default function ChatClient() {
                             {message.content.split('\n').map((line, i) => {
                               // Simple bold parser
                               const parts = line.split(/(\*\*.*?\*\*)/g);
+                              const isLastParagraph = i === message.content.split('\n').length - 1;
+                              const isLastAssistantMessage = message.role === "assistant" && message.id === messages[messages.length - 1]?.id;
+                              const shouldShowCursor = isLastAssistantMessage && isTyping && isLastParagraph;
+
                               return (
                                 <p key={i} className="mb-2 last:mb-0">
                                   {parts.map((part, j) => {
@@ -815,6 +819,7 @@ export default function ChatClient() {
                                     }
                                     return part;
                                   })}
+                                  {shouldShowCursor && <span className="typing-cursor" />}
                                 </p>
                               );
                             })}
