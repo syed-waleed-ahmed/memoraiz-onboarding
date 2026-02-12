@@ -4,6 +4,8 @@ import { join } from "node:path";
 const RAG_SOURCES = [
   "Catalogo_MemorAIz_v1.md",
   "Features_List_Assistente_AI.md",
+  "Memoraiz_Onboarding_Goals.md",
+  "Memoraiz_Key_Concepts.md",
 ];
 
 const CHUNK_SIZE = 900;

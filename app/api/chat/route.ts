@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getConversationById } from "@/lib/db/conversationRepo";
-import { runChat } from "@/lib/api/chatService";
+import { streamChat } from "@/lib/api/chatService";
 import type { CompanyProfile } from "@/lib/store/profileStore";
 
 interface ChatRequestBody {
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
   }
 
-  const output = await runChat({
+  const stream = await streamChat({
     message: body.message,
     conversationId,
     stableUserId,
@@ -39,9 +39,9 @@ export async function POST(request: Request) {
     profile: body.profile,
   });
 
-  return NextResponse.json({
-    reply: output.reply,
-    conversationId,
-    profile: output.profile,
+  return new NextResponse(stream, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+    },
   });
 }

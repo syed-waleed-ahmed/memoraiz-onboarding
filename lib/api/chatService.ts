@@ -97,3 +97,73 @@ export async function runChat({
     profile: updatedProfile,
   };
 }
+
+export async function streamChat({
+  message,
+  conversationId,
+  stableUserId,
+  tabSessionId,
+  profile,
+}: ChatRunInput) {
+  const currentProfile = await loadProfileForConversation(conversationId, profile);
+
+  const requestContext = new RequestContext<{
+    conversationId: string;
+    stableUserId: string;
+    tabSessionId: string;
+    profile: CompanyProfile;
+  }>();
+  requestContext.set("conversationId", conversationId);
+  requestContext.set("stableUserId", stableUserId);
+  requestContext.set("tabSessionId", tabSessionId);
+  requestContext.set("profile", currentProfile);
+
+  const agent = createOnboardingAgent();
+  await appendMessage(stableUserId, conversationId, "user", message).catch(
+    () => null,
+  );
+
+  const streamResult = await agent.stream(
+    [
+      {
+        role: "system",
+        content: buildProfileContext(currentProfile),
+      },
+      {
+        role: "user",
+        content: message,
+      },
+    ],
+    { requestContext },
+  );
+
+  // Assumes streamResult has a textStream (AsyncIterable<string>)
+  const textStream = streamResult.textStream;
+
+  let fullText = "";
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        for await (const chunk of textStream) {
+          const text = chunk;
+          fullText += text;
+          controller.enqueue(encoder.encode(text));
+        }
+        controller.close();
+      } catch (e) {
+        controller.error(e);
+      } finally {
+        // Persist the full message after stream ends
+        if (fullText) {
+          await appendMessage(stableUserId, conversationId, "assistant", fullText).catch(
+            () => null,
+          );
+        }
+      }
+    },
+  });
+
+  return stream;
+}

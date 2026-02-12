@@ -62,7 +62,7 @@ const PROMPT_CHIPS = [
 ];
 
 const WELCOME_MESSAGE =
-  "Ciao! I’m the Memoraiz Onboarding Assistant — let’s build your company profile. What’s your company name?";
+  "Ciao! I’m the MemorAIz Onboarding Assistant — let’s build your company profile. What’s your company name?";
 
 function formatTimestamp(value?: string) {
   if (!value) return "Now";
@@ -99,7 +99,7 @@ export default function ChatClient() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const streamingTimerRef = useRef<number | null>(null);
+
   const pollingTimerRef = useRef<number | null>(null);
   const saveTimerRef = useRef<number | null>(null);
   const copyTimerRef = useRef<number | null>(null);
@@ -328,9 +328,9 @@ export default function ChatClient() {
   const canSend = useMemo(
     () =>
       Boolean(
-        input.trim() && !isTyping && activeConversationId && stableUserId && tabSessionId,
+        input.trim() && !isTyping && stableUserId && tabSessionId,
       ),
-    [input, isTyping, activeConversationId, stableUserId, tabSessionId],
+    [input, isTyping, stableUserId, tabSessionId],
   );
 
   const canEditForm = useMemo(() => !isTyping && !isSubmitting, [isTyping, isSubmitting]);
@@ -340,10 +340,6 @@ export default function ChatClient() {
   }, [profile]);
 
   const stopStreaming = useCallback(() => {
-    if (streamingTimerRef.current) {
-      window.clearInterval(streamingTimerRef.current);
-      streamingTimerRef.current = null;
-    }
     setIsTyping(false);
   }, []);
 
@@ -424,44 +420,7 @@ export default function ChatClient() {
     });
   }, []);
 
-  const startStreamingReply = useCallback((reply: string) => {
-    const replyId = crypto.randomUUID();
-    setMessages((current) => [
-      ...current,
-      {
-        id: replyId,
-        role: "assistant",
-        content: "",
-        createdAt: new Date().toISOString(),
-      },
-    ]);
 
-    const characters = Array.from(reply);
-    let index = 0;
-
-    if (streamingTimerRef.current) {
-      window.clearInterval(streamingTimerRef.current);
-    }
-
-    streamingTimerRef.current = window.setInterval(() => {
-      index += 1;
-      setMessages((current) =>
-        current.map((message) =>
-          message.id === replyId
-            ? { ...message, content: characters.slice(0, index).join("") }
-            : message,
-        ),
-      );
-
-      if (index >= characters.length) {
-        if (streamingTimerRef.current) {
-          window.clearInterval(streamingTimerRef.current);
-          streamingTimerRef.current = null;
-        }
-        setIsTyping(false);
-      }
-    }, 18);
-  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -555,17 +514,42 @@ export default function ChatClient() {
         }),
       });
 
-      if (!response.ok) {
+      if (!response.ok || !response.body) {
         throw new Error("Chat request failed");
       }
 
-      const data = (await response.json()) as {
-        reply: string;
-        conversationId: string;
-        profile?: CompanyProfile;
-      };
-      if (data.profile) setProfile(data.profile);
-      startStreamingReply(data.reply);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      const replyId = crypto.randomUUID();
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: replyId,
+          role: "assistant",
+          content: "",
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      let done = false;
+      let streamedText = "";
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        const chunkValue = decoder.decode(value, { stream: true });
+        streamedText += chunkValue;
+
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === replyId
+              ? { ...message, content: streamedText }
+              : message
+          )
+        );
+      }
+
       window.dispatchEvent(new CustomEvent("memoraiz:conversations-updated"));
     } catch {
       setMessages((current) => [
@@ -579,9 +563,7 @@ export default function ChatClient() {
       ]);
       setIsTyping(false);
     } finally {
-      if (!streamingTimerRef.current) {
-        setIsTyping(false);
-      }
+      setIsTyping(false);
     }
   };
 
@@ -610,18 +592,42 @@ export default function ChatClient() {
           }),
         });
 
-        if (!response.ok) {
+        if (!response.ok || !response.body) {
           throw new Error("Chat request failed");
         }
 
-        const data = (await response.json()) as {
-          reply: string;
-          conversationId: string;
-          profile?: CompanyProfile;
-        };
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        const replyId = crypto.randomUUID();
 
-        if (data.profile) setProfile(data.profile);
-        startStreamingReply(data.reply);
+        setMessages((current) => [
+          ...current,
+          {
+            id: replyId,
+            role: "assistant",
+            content: "",
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+
+        let done = false;
+        let streamedText = "";
+
+        while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+          const chunkValue = decoder.decode(value, { stream: true });
+          streamedText += chunkValue;
+
+          setMessages((current) =>
+            current.map((message) =>
+              message.id === replyId
+                ? { ...message, content: streamedText }
+                : message
+            )
+          );
+        }
+
         window.dispatchEvent(new CustomEvent("memoraiz:conversations-updated"));
       } catch {
         setMessages((current) => [
@@ -634,9 +640,11 @@ export default function ChatClient() {
           },
         ]);
         setIsTyping(false);
+      } finally {
+        setIsTyping(false);
       }
     },
-    [activeConversationId, isTyping, profile, stableUserId, tabSessionId, startStreamingReply],
+    [activeConversationId, isTyping, profile, stableUserId, tabSessionId],
   );
 
   const handleRegenerate = async (assistantMessageId?: string) => {
