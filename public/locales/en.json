@@ -1,0 +1,57 @@
+{
+    "common": {
+        "new_chat": "New chat",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "last_7_days": "Last 7 days",
+        "older": "Older",
+        "no_conversations": "No conversations yet. Start a new one.",
+        "ready": "Ready",
+        "typing": "Assistant typing...",
+        "onboarding_chat": "Onboarding Chat",
+        "conversation_hub": "Conversation Hub",
+        "onboarding_subtitle": "The assistant interviews your team and fills the canvas.",
+        "quick_prompts": "Quick prompts",
+        "save": "Save",
+        "cancel": "Cancel",
+        "now": "Now",
+        "edited": "Edited",
+        "chat": "Chat",
+        "canvas": "Canvas",
+        "dark_mode": "Dark mode",
+        "light_mode": "Light mode",
+        "english": "English",
+        "italian": "Italian",
+        "language": "Language",
+        "theme": "Theme",
+        "company_canvas": "Company Canvas",
+        "canvas_subtitle": "Review or refine the profile as the agent learns.",
+        "editable": "Editable",
+        "locked": "Locked",
+        "submit": "Submit",
+        "saving": "Saving...",
+        "request_submitted": "Request Submitted",
+        "saved_success": "Profile saved successfully!",
+        "input_placeholder": "Share details about your company...",
+        "add_placeholder": "Add "
+    },
+    "canvas": {
+        "name": "Company Name",
+        "industry": "Industry",
+        "description": "Description",
+        "aiMaturityLevel": "AI Maturity",
+        "aiUsage": "AI Usage",
+        "goals": "Goals"
+    },
+    "chat": {
+        "welcome": "Ciao! I’m the MemorAIz Onboarding Assistant — let’s build your company profile. What’s your company name?",
+        "error_reached": "I ran into a problem reaching the agent. Please try again.",
+        "error_regenerating": "I ran into a problem regenerating the response. Please try again."
+    },
+    "prompts": {
+        "what_is_memoraiz": "What is MemorAIz and how can it help my company?",
+        "canvas_details": "What details do I need to provide for the Company Canvas?",
+        "ai_maturity": "How do I define my company's AI maturity level?",
+        "onboarding_goals": "What are some common onboarding goals I should consider?"
+    }
+}

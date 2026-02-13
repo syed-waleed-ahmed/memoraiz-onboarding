@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useI18n } from "@/lib/i18n";
 import {
   getOrCreateStableUserId,
   getOrCreateTabSessionId,
@@ -21,37 +22,42 @@ type ConversationMeta = {
   lastMessageAt: string | null;
 };
 
-function bucketLabel(date: Date, now: Date) {
+interface BucketLabeler {
+  (date: Date, now: Date, t: (path: string) => string): string;
+}
+
+const bucketLabel: BucketLabeler = (date, now, t) => {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfYesterday = new Date(startOfToday);
   startOfYesterday.setDate(startOfToday.getDate() - 1);
   const startOfWeek = new Date(startOfToday);
   startOfWeek.setDate(startOfToday.getDate() - 6);
 
-  if (date >= startOfToday) return "Today";
-  if (date >= startOfYesterday) return "Yesterday";
-  if (date >= startOfWeek) return "Last 7 days";
-  return "Older";
-}
+  if (date >= startOfToday) return t("common.today");
+  if (date >= startOfYesterday) return t("common.yesterday");
+  if (date >= startOfWeek) return t("common.last_7_days");
+  return t("common.older");
+};
 
-function groupConversations(conversations: ConversationMeta[]) {
+function groupConversations(conversations: ConversationMeta[], t: (path: string) => string) {
   const now = new Date();
   const buckets = new Map<string, ConversationMeta[]>();
   conversations.forEach((conversation) => {
     const timestamp = conversation.lastMessageAt ?? conversation.updatedAt;
-    const label = bucketLabel(new Date(timestamp), now);
+    const label = bucketLabel(new Date(timestamp), now, t);
     const group = buckets.get(label) ?? [];
     group.push(conversation);
     buckets.set(label, group);
   });
 
-  return ["Today", "Yesterday", "Last 7 days", "Older"]
+  return [t("common.today"), t("common.yesterday"), t("common.last_7_days"), t("common.older")]
     .map((label) => ({ label, items: buckets.get(label) ?? [] }))
     .filter((group) => group.items.length > 0);
 }
 
 export default function SidebarClient() {
   const router = useRouter();
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const queryConversationId = searchParams.get("c");
   const [stableUserId, setStableUserId] = useState<string | null>(null);
@@ -85,8 +91,8 @@ export default function SidebarClient() {
   }, [queryConversationId]);
 
   const groupedConversations = useMemo(
-    () => groupConversations(conversations),
-    [conversations],
+    () => groupConversations(conversations, t),
+    [conversations, t],
   );
 
   const prefetchById = useCallback(
@@ -247,13 +253,13 @@ export default function SidebarClient() {
           className="theme-btn"
           style={{ width: '100%', borderRadius: '12px', fontSize: '15px', fontWeight: 600 }}
         >
-          + New chat
+          + {t("common.new_chat")}
         </button>
       </div>
 
-      <div className="mt-6 flex-1 space-y-6 overflow-y-auto text-sm blend-scroll pr-1">
+      <div className="mt-6 flex-1 space-y-6 overflow-y-auto blend-scroll pr-1">
         {groupedConversations.length === 0 ? (
-          <p className="text-slate-500">No conversations yet. Start a new one.</p>
+          <p className="text-slate-500">{t("common.no_conversations")}</p>
         ) : (
           groupedConversations.map((group) => (
             <div key={group.label} className="space-y-2">
@@ -350,3 +356,4 @@ export default function SidebarClient() {
     </div>
   );
 }
+

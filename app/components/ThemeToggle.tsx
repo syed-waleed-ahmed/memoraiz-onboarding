@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 
 const STORAGE_KEY = "memoraiz-theme";
 
@@ -13,6 +14,7 @@ function applyTheme(mode: ThemeMode) {
 
 export default function ThemeToggle() {
   const [mode, setMode] = useState<ThemeMode>("dark");
+  const { t } = useI18n();
 
   useEffect(() => {
     // Sync React state with what's actually on the document
@@ -39,8 +41,9 @@ export default function ThemeToggle() {
       aria-label="Toggle theme"
     >
       <span className="text-slate-200">
-        {mode === "dark" ? "Dark mode" : "Light mode"}
+        {mode === "dark" ? t("common.dark_mode") : t("common.light_mode")}
       </span>
+
       <span className="flex items-center gap-2">
         {mode === "dark" ? (
           <svg

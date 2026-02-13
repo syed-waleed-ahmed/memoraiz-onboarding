@@ -1,0 +1,57 @@
+{
+    "common": {
+        "new_chat": "Nuova chat",
+        "today": "Oggi",
+        "yesterday": "Ieri",
+        "last_7_days": "Ultimi 7 giorni",
+        "older": "Più vecchi",
+        "no_conversations": "Ancora nessuna conversazione. Inizia una nuova.",
+        "ready": "Pronto",
+        "typing": "L'assistente sta scrivendo...",
+        "onboarding_chat": "Chat di Bordo",
+        "conversation_hub": "Centro Conversazioni",
+        "onboarding_subtitle": "L'assistente intervista il tuo team e compila la tela.",
+        "quick_prompts": "Suggerimenti rapidi",
+        "save": "Salva",
+        "cancel": "Annulla",
+        "now": "Adesso",
+        "edited": "Modificato",
+        "chat": "Chat",
+        "canvas": "Tela",
+        "dark_mode": "Modalità scura",
+        "light_mode": "Modalità chiara",
+        "english": "Inglese",
+        "italian": "Italiano",
+        "language": "Lingua",
+        "theme": "Tema",
+        "company_canvas": "Tela dell'azienda",
+        "canvas_subtitle": "Rivedi o perfeziona il profilo mentre l'agente impara.",
+        "editable": "Modificabile",
+        "locked": "Bloccato",
+        "submit": "Invia",
+        "saving": "Salvataggio...",
+        "request_submitted": "Richiesta Inviata",
+        "saved_success": "Profilo salvato con successo!",
+        "input_placeholder": "Condividi i dettagli della tua azienda...",
+        "add_placeholder": "Aggiungi "
+    },
+    "canvas": {
+        "name": "Nome Azienda",
+        "industry": "Settore",
+        "description": "Descrizione",
+        "aiMaturityLevel": "Maturità AI",
+        "aiUsage": "Utilizzo AI",
+        "goals": "Obiettivi"
+    },
+    "chat": {
+        "welcome": "Ciao! Sono l'assistente per l'onboarding di MemorAIz — costruiamo il profilo della tua azienda. Qual è il nome della tua azienda?",
+        "error_reached": "Ho riscontrato un problema nel raggiungere l'agente. Riprova.",
+        "error_regenerating": "Ho riscontrato un problema nella rigenerazione della risposta. Riprova."
+    },
+    "prompts": {
+        "what_is_memoraiz": "Cos'è MemorAIz e come può aiutare la mia azienda?",
+        "canvas_details": "Quali dettagli devo fornire per la Company Canvas?",
+        "ai_maturity": "Come definisco il livello di maturità AI della mia azienda?",
+        "onboarding_goals": "Quali sono alcuni obiettivi di onboarding comuni che dovrei considerare?"
+    }
+}

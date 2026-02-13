@@ -9,6 +9,7 @@ Split-screen onboarding experience with a live company-profile canvas and an AI-
 - **Sidebar conversation hub** — rename, delete, and switch between past conversations.
 - **Light / dark theme** — toggle with theme-aware styling throughout.
 - **Real-time canvas sync** — profile fields update as the chat progresses.
+- **Multi-language support** — toggle between English and Italian.
 - **Mobile-ready** — tab switcher for seamless chat/canvas toggling on smaller screens.
 - **Performance Optimized Stack**:
     - **Parallel LLM Race**: Launches OpenAI and Gemini simultaneously; the fastest response wins.

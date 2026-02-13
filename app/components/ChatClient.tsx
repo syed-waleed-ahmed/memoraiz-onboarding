@@ -15,6 +15,7 @@ import {
   setCachedConversation,
 } from "@/lib/ui/conversationCache";
 import confetti from "canvas-confetti";
+import { useI18n } from "@/lib/i18n";
 
 
 type ChatRole = "assistant" | "user" | "system" | "tool";
@@ -54,25 +55,25 @@ const EMPTY_PROFILE: CompanyProfile = {
   goals: "",
 };
 
-const PROMPT_CHIPS = [
-  "What is MemorAIz and how can it help my company?",
-  "What details do I need to provide for the Company Canvas?",
-  "How do I define my company's AI maturity level?",
-  "What are some common onboarding goals I should consider?",
-];
+const WELCOME_MESSAGE_KEY = "chat.welcome";
 
-const WELCOME_MESSAGE =
-  "Ciao! I’m the MemorAIz Onboarding Assistant — let’s build your company profile. What’s your company name?";
-
-function formatTimestamp(value?: string) {
-  if (!value) return "Now";
+function formatTimestamp(t: (path: string) => string, value?: string) {
+  if (!value) return t("common.now");
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Now";
+  if (Number.isNaN(date.getTime())) return t("common.now");
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function ChatClient() {
   const router = useRouter();
+  const { t } = useI18n();
+
+  const PROMPT_CHIPS = useMemo(() => [
+    t("prompts.what_is_memoraiz"),
+    t("prompts.canvas_details"),
+    t("prompts.ai_maturity"),
+    t("prompts.onboarding_goals"),
+  ], [t]);
   const searchParams = useSearchParams();
   const queryConversationId = searchParams.get("c");
   const [stableUserId, setStableUserId] = useState<string | null>(null);
@@ -347,10 +348,10 @@ export default function ChatClient() {
     return {
       id: "welcome-message",
       role: "assistant",
-      content: WELCOME_MESSAGE,
+      content: t(WELCOME_MESSAGE_KEY),
       createdAt: new Date().toISOString(),
     };
-  }, []);
+  }, [t]);
 
   const visibleMessages = useMemo(() => {
     if (messages.length > 0) return messages;
@@ -557,7 +558,7 @@ export default function ChatClient() {
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: "I ran into a problem reaching the agent. Please try again.",
+          content: t("chat.error_reached"),
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -635,7 +636,7 @@ export default function ChatClient() {
           {
             id: crypto.randomUUID(),
             role: "assistant",
-            content: "I ran into a problem regenerating the response. Please try again.",
+            content: t("chat.error_regenerating"),
             createdAt: new Date().toISOString(),
           },
         ]);
@@ -644,7 +645,7 @@ export default function ChatClient() {
         setIsTyping(false);
       }
     },
-    [activeConversationId, isTyping, profile, stableUserId, tabSessionId],
+    [activeConversationId, isTyping, profile, stableUserId, tabSessionId, t],
   );
 
   const handleRegenerate = async (assistantMessageId?: string) => {
@@ -697,13 +698,13 @@ export default function ChatClient() {
             className={`mobile-tab${activeTab === "chat" ? " mobile-tab-active" : ""}`}
             onClick={() => setActiveTab("chat")}
           >
-            Chat
+            {t("common.chat")}
           </button>
           <button
             className={`mobile-tab${activeTab === "canvas" ? " mobile-tab-active" : ""}`}
             onClick={() => setActiveTab("canvas")}
           >
-            Canvas
+            {t("common.canvas")}
           </button>
         </div>
       )}
@@ -718,14 +719,14 @@ export default function ChatClient() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="section-title heading-font text-lg font-semibold text-slate-100">
-                  Onboarding Chat
+                  {t("common.onboarding_chat")}
                 </h2>
                 <p className="section-subtitle text-sm text-slate-400">
-                  The assistant interviews your team and fills the canvas.
+                  {t("common.onboarding_subtitle")}
                 </p>
               </div>
               <div className="badge-ready rounded-full px-3 py-1 text-xs font-medium">
-                {isTyping ? "Assistant typing..." : "Ready"}
+                {isTyping ? t("common.typing") : t("common.ready")}
               </div>
             </div>
           </div>
@@ -735,7 +736,7 @@ export default function ChatClient() {
               {messages.length === 0 && (
                 <div className="panel-card p-5">
                   <div className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                    Quick prompts
+                    {t("common.quick_prompts")}
                   </div>
                   <div className="mt-4 flex flex-wrap gap-3">
                     {PROMPT_CHIPS.map((label) => (
@@ -791,13 +792,13 @@ export default function ChatClient() {
                               onClick={saveEditedMessage}
                               className="theme-btn-icon rounded-full px-3 py-1"
                             >
-                              Save
+                              {t("common.save")}
                             </button>
                             <button
                               onClick={cancelEditingMessage}
                               className="theme-btn-icon rounded-full px-3 py-1 opacity-60"
                             >
-                              Cancel
+                              {t("common.cancel")}
                             </button>
                           </div>
                         </div>
@@ -825,10 +826,10 @@ export default function ChatClient() {
                             })}
                           </div>
                           <div className="message-meta mt-2 flex items-center gap-2 text-xs text-slate-500">
-                            <span>{formatTimestamp(message.createdAt)}</span>
+                            <span>{formatTimestamp(t, message.createdAt)}</span>
                             {message.edited && message.role === "user" && (
                               <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400">
-                                Edited
+                                {t("common.edited")}
                               </span>
                             )}
                           </div>
@@ -953,7 +954,7 @@ export default function ChatClient() {
               {isTyping && (
                 <div className="flex justify-start">
                   <div className="panel-soft px-4 py-3 text-sm text-slate-400">
-                    Typing...
+                    {t("common.typing")}
                   </div>
                 </div>
               )}
@@ -973,7 +974,7 @@ export default function ChatClient() {
                       void handleSend();
                     }
                   }}
-                  placeholder="Share details about your company..."
+                  placeholder={t("common.input_placeholder")}
                   className="flex-1 bg-transparent text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none"
                 />
                 <button
@@ -1020,14 +1021,14 @@ export default function ChatClient() {
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
             <div>
               <h2 className="section-title heading-font text-lg font-semibold text-slate-100">
-                Company Canvas
+                {t("common.company_canvas")}
               </h2>
               <p className="section-subtitle text-sm text-slate-400">
-                Review or refine the profile as the agent learns.
+                {t("common.canvas_subtitle")}
               </p>
             </div>
             <div className="badge-editable rounded-full px-3 py-1 text-xs font-medium">
-              {canEditForm ? "Editable" : "Locked"}
+              {canEditForm ? t("common.editable") : t("common.locked")}
             </div>
           </div>
 
@@ -1064,12 +1065,12 @@ export default function ChatClient() {
             }}
           >
             {([
-              { key: "name", label: "Company Name" },
-              { key: "industry", label: "Industry" },
-              { key: "description", label: "Description" },
-              { key: "aiMaturityLevel", label: "AI Maturity" },
-              { key: "aiUsage", label: "AI Usage" },
-              { key: "goals", label: "Goals" },
+              { key: "name", label: t("canvas.name") },
+              { key: "industry", label: t("canvas.industry") },
+              { key: "description", label: t("canvas.description") },
+              { key: "aiMaturityLevel", label: t("canvas.aiMaturityLevel") },
+              { key: "aiUsage", label: t("canvas.aiUsage") },
+              { key: "goals", label: t("canvas.goals") },
             ] as const).map(({ key, label }) => (
               <label
                 key={key}
@@ -1091,7 +1092,7 @@ export default function ChatClient() {
                     }
                   }}
                   className="formal-canvas-textarea mt-1 w-full"
-                  placeholder={`Add ${label.toLowerCase()}...`}
+                  placeholder={`${t("common.add_placeholder")}${label.toLowerCase()}...`}
                   disabled={!canEditForm}
                   style={{ overflow: 'hidden' }}
                 />
@@ -1103,11 +1104,11 @@ export default function ChatClient() {
                 className="formal-canvas-submit disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!canEditForm || !isFormValid || isSubmitting}
               >
-                {showSuccess ? "Request Submitted" : isSubmitting ? "Saving..." : "Submit"}
+                {showSuccess ? t("common.request_submitted") : isSubmitting ? t("common.saving") : t("common.submit")}
               </button>
               {showSuccess && (
                 <p className="mt-2 text-xs text-emerald-400">
-                  Profile saved successfully!
+                  {t("common.saved_success")}
                 </p>
               )}
             </div>
