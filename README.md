@@ -71,6 +71,7 @@ app/
 ├── components/       # React components
 │   ├── ChatClient.tsx      # Main chat interface
 │   ├── ChatShell.tsx       # Suspense wrapper
+│   ├── LanguageToggle.tsx  # Interactive language switcher
 │   ├── MemoraizLogo.tsx    # Logo component
 │   ├── Sidebar.tsx         # Sidebar layout
 │   ├── SidebarClient.tsx   # Sidebar logic (conversations, new chat)
@@ -81,13 +82,25 @@ app/
 
 lib/
 ├── db/               # Database helpers (conversationRepo, messageRepo, etc.)
+├── mastra/           # Mastra agent configuration & tools
+├── env.ts            # Environment variable validation
+├── i18n.tsx          # Internationalization logic & hooks
 ├── session.ts        # Client-side session management
 ├── store/            # In-memory profile store
 └── ui/               # UI utilities (conversation cache)
 
+public/
+└── locales/          # JSON dictionaries (en.json, it.json)
+
 scripts/
 ├── apply-schema.ts   # Apply Postgres schema
 └── ingest-docs.ts    # Ingest documents for RAG
+
+rag_benchmark/
+├── README.md         # Benchmark documentation
+├── questions.json    # Evaluation dataset
+├── requirements.txt  # Python requirements
+└── run_eval.py       # Benchmark runner script
 ```
 
 ## Scripts
