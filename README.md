@@ -100,6 +100,24 @@ scripts/
 | `npm test` | Run tests (Vitest) |
 | `npm run ingest:docs` | Ingest documents into pgvector |
 
+## RAG Benchmark
+
+Evaluate and compare OpenAI and Gemini models against your actual project data.
+
+- **Automated Metrics**: Faithfulness, Relevancy, Precision, and Recall using **RAGAS**.
+- **Real-time Context**: Benchmarks against your live Postgres database or local Markdown documents.
+- **Production Testing**: Supports benchmarking your local server or live Vercel deployment.
+
+For detailed setup and execution instructions, see [rag_benchmark/README.md](rag_benchmark/README.md).
+
+```bash
+# Run benchmark locally
+python rag_benchmark/run_eval.py
+
+# Run against production
+python rag_benchmark/run_eval.py --url https://memoraiz-onboarding.vercel.app/
+```
+
 ## Database
 
 Schema lives in `lib/db/schema.sql`. Apply it with:

@@ -1,0 +1,34 @@
+[
+    {
+        "question": "What is the Company Canvas in Memoraiz?",
+        "ground_truth": "The Company Canvas is a structured profile that captures the essential DNA of your organization. It collects six core dimensions: Company Name, Industry, Description, AI Maturity Level, AI Usage, and Goals. It serves as the identity card for your AI assistant."
+    },
+    {
+        "question": "What are the AI maturity levels in Memoraiz?",
+        "ground_truth": "Memoraiz defines four AI maturity levels: Level 1 Explorer (just starting to learn about AI), Level 2 Adopter (uses AI regularly for specific tasks), Level 3 Strategist (AI integrated into core processes), and Level 4 Innovator (pushing boundaries with custom models)."
+    },
+    {
+        "question": "How can Memoraiz help automate customer support?",
+        "ground_truth": "Memoraiz can deploy an AI assistant to handle Level 1 support queries 24/7, lowering response times, reducing support ticket volume, and improving customer satisfaction."
+    },
+    {
+        "question": "What is the goal of centralizing company knowledge with Memoraiz?",
+        "ground_truth": "The goal is to aggregate scattered documentation from PDFs, Notion, and Google Drive into a single queryable source of truth, reducing time spent searching for information and ensuring everyone accesses up-to-date data."
+    },
+    {
+        "question": "How does Memoraiz streamline employee onboarding?",
+        "ground_truth": "Memoraiz answers new hire questions about company policies, procedures, and culture, freeing up HR time and providing instant answers to repetitive questions for new employees."
+    },
+    {
+        "question": "What modules does Memoraiz offer?",
+        "ground_truth": "Memoraiz offers various modules and assistants tailored to different sectors and use cases, helping organizations centralize knowledge, automate support, and enhance internal productivity."
+    },
+    {
+        "question": "What is an AI Maturity Level 3 Strategist?",
+        "ground_truth": "A Level 3 Strategist has AI integrated into core processes, has a strategy for data, automation, and content generation, and focuses on scaling AI adoption, integrating with APIs, and custom agent development."
+    },
+    {
+        "question": "How does Memoraiz improve data accessibility?",
+        "ground_truth": "Memoraiz makes unstructured data like meeting notes or historic reports easily searchable and usable, helping leverage hidden insights and institutional knowledge that was previously hard to retrieve."
+    }
+]
