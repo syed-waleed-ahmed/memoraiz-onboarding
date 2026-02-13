@@ -31,7 +31,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var stored = localStorage.getItem("memoraiz-theme");
+                  var theme = stored;
+                  if (!stored || (stored !== "light" && stored !== "dark")) {
+                    theme = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+                  }
+                  document.documentElement.setAttribute("data-theme", theme);
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${plusJakartaSans.variable} ${spaceGrotesk.variable} antialiased flex flex-col min-h-screen lg:h-screen lg:overflow-hidden`}
         suppressHydrationWarning

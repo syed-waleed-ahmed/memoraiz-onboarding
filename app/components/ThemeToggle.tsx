@@ -15,17 +15,11 @@ export default function ThemeToggle() {
   const [mode, setMode] = useState<ThemeMode>("dark");
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
-    if (stored === "light" || stored === "dark") {
-      setMode(stored);
-      applyTheme(stored);
-      return;
+    // Sync React state with what's actually on the document
+    const currentTheme = document.documentElement.getAttribute("data-theme") as ThemeMode | null;
+    if (currentTheme === "light" || currentTheme === "dark") {
+      setMode(currentTheme);
     }
-    const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
-    const next = prefersLight ? "light" : "dark";
-    setMode(next);
-    applyTheme(next);
   }, []);
 
   const toggleTheme = () => {
