@@ -3,6 +3,13 @@ import { embedText } from "@/lib/mastra/embeddings";
 import { searchDocuments } from "@/lib/db/vectorRepo";
 import { searchLocalDocs } from "@/lib/mastra/docs";
 
+interface ResultItem {
+    content: string;
+    title?: string | null;
+    source?: string | null;
+    score?: number;
+}
+
 export async function POST(req: NextRequest) {
     try {
         const { query, limit = 5 } = await req.json();
@@ -11,7 +18,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "query (string) is required" }, { status: 400 });
         }
 
-        let results: any[] = [];
+        let results: ResultItem[] = [];
 
         // Try vector search first (if Postgres is ready)
         try {

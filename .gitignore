@@ -42,3 +42,14 @@ next-env.d.ts
 # benchmark results
 /rag_benchmark/results/*
 !/rag_benchmark/results/.gitkeep
+
+# caches
+.deepeval/
+.pytest_cache/
+/__pycache__/
+**/*.pyc
+.vscode/
+
+# logs
+*.log
+lint_output.txt
